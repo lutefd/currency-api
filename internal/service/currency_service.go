@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -77,9 +76,40 @@ func (s *CurrencyService) getRate(ctx context.Context, code string) (float64, er
 }
 
 func (s *CurrencyService) AddCurrency(ctx context.Context, code string, rate float64) error {
-	return errors.New("not implemented")
+	_, err := s.repo.GetByCode(ctx, code)
+	if err == nil {
+		return fmt.Errorf("currency %s already exists", code)
+	}
+
+	currency := &model.Currency{
+		Code:      code,
+		Rate:      rate,
+		UpdatedAt: time.Now(),
+	}
+
+	if err := s.repo.Create(ctx, currency); err != nil {
+		return fmt.Errorf("failed to add currency to repository: %w", err)
+	}
+
+	if err := s.cache.Set(ctx, code, rate, 1*time.Hour); err != nil {
+		fmt.Printf("Failed to update cache for new currency %s: %v\n", code, err)
+	}
+
+	return nil
 }
 
 func (s *CurrencyService) RemoveCurrency(ctx context.Context, code string) error {
-	return errors.New("not implemented")
+	_, err := s.repo.GetByCode(ctx, code)
+	if err != nil {
+		return fmt.Errorf("currency %s not found", code)
+	}
+
+	if err := s.repo.Delete(ctx, code); err != nil {
+		return fmt.Errorf("failed to remove currency from repository: %w", err)
+	}
+
+	if err := s.cache.Delete(ctx, code); err != nil {
+		fmt.Printf("Failed to remove currency %s from cache: %v\n", code, err)
+	}
+	return nil
 }
