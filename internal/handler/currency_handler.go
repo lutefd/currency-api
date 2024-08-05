@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/service"
@@ -21,8 +22,8 @@ func NewCurrencyHandler(currencyService *service.CurrencyService) *CurrencyHandl
 }
 
 func (h *CurrencyHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
+	from := strings.ToUpper(r.URL.Query().Get("from"))
+	to := strings.ToUpper(r.URL.Query().Get("to"))
 	amountStr := r.URL.Query().Get("amount")
 
 	if from == "" || to == "" || amountStr == "" {
