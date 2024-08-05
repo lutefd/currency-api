@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/cache"
@@ -61,7 +62,7 @@ func (s *CurrencyService) getRate(ctx context.Context, code string) (float64, er
 		return 0, fmt.Errorf("currency %s not found", code)
 	}
 	currency = &model.Currency{
-		Code:      code,
+		Code:      strings.ToUpper(code),
 		Rate:      rate,
 		UpdatedAt: time.Now(),
 	}
@@ -82,7 +83,7 @@ func (s *CurrencyService) AddCurrency(ctx context.Context, code string, rate flo
 	}
 
 	currency := &model.Currency{
-		Code:      code,
+		Code:      strings.ToUpper(code),
 		Rate:      rate,
 		UpdatedAt: time.Now(),
 	}
