@@ -11,7 +11,7 @@ import (
 
 func main() {
 	godotenv.Load(".env")
-	srv := server.NewServer()
+	srv := server.NewServer(server.LoadConfig())
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 	err := srv.Start(ctx)
