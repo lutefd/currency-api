@@ -60,3 +60,7 @@ func (c *RedisCache) Delete(ctx context.Context, key string) error {
 	}
 	return nil
 }
+
+func (c *RedisCache) Close() error {
+	return c.client.Close()
+}
