@@ -8,8 +8,11 @@ require (
 )
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.6.1
+	golang.org/x/crypto v0.25.0
+	golang.org/x/time v0.6.0
 )
 
 require (
