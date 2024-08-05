@@ -44,7 +44,7 @@ func LoadConfig() (Config, error) {
 	} else {
 		parsedServerPort, err := strconv.ParseUint(serverPort, 10, 16)
 		if err != nil {
-			errors = append(errors, fmt.Sprintf("Invalid SERVER_PORT: %s", err))
+			errors = append(errors, fmt.Sprintf("invalid SERVER_PORT: %s", err))
 		} else {
 			config.ServerPort = uint16(parsedServerPort)
 		}

@@ -93,7 +93,7 @@ func (s *CurrencyService) AddCurrency(ctx context.Context, code string, rate flo
 	}
 
 	if err := s.cache.Set(ctx, code, rate, 1*time.Hour); err != nil {
-		fmt.Printf("Failed to update cache for new currency %s: %v\n", code, err)
+		fmt.Printf("failed to update cache for new currency %s: %v\n", code, err)
 	}
 
 	return nil
@@ -110,7 +110,7 @@ func (s *CurrencyService) RemoveCurrency(ctx context.Context, code string) error
 	}
 
 	if err := s.cache.Delete(ctx, code); err != nil {
-		fmt.Printf("Failed to remove currency %s from cache: %v\n", code, err)
+		fmt.Printf("failed to remove currency %s from cache: %v\n", code, err)
 	}
 	return nil
 }

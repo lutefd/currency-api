@@ -85,15 +85,15 @@ func (s *Server) Shutdown() error {
 		return err
 	}
 	if err := s.currencyRepo.Close(); err != nil {
-		logger.Errorf("Database connection close error: %v", err)
+		logger.Errorf("database connection close error: %v", err)
 		return err
 	}
 
 	if err := s.currencyCache.Close(); err != nil {
-		logger.Errorf("Cache connection close error: %v", err)
+		logger.Errorf("cache connection close error: %v", err)
 		return err
 	}
 
-	logger.Info("Server shutdown complete")
+	logger.Info("server shutdown complete")
 	return nil
 }

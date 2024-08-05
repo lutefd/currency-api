@@ -158,18 +158,18 @@ func TestCurrencyService_AddCurrency(t *testing.T) {
 
 			if tt.expectedError {
 				if err == nil {
-					t.Errorf("Expected an error, but got none")
+					t.Errorf("expected an error, but got none")
 				}
 			} else {
 				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
+					t.Errorf("unexpected error: %v", err)
 				}
 				currency, err := repo.GetByCode(context.Background(), tt.code)
 				if err != nil {
-					t.Errorf("Failed to get added currency: %v", err)
+					t.Errorf("failed to get added currency: %v", err)
 				}
 				if currency.Rate != tt.rate {
-					t.Errorf("Expected rate %f, but got %f", tt.rate, currency.Rate)
+					t.Errorf("expected rate %f, but got %f", tt.rate, currency.Rate)
 				}
 			}
 		})
@@ -200,8 +200,8 @@ func TestCurrencyService_RemoveCurrency(t *testing.T) {
 		code          string
 		expectedError bool
 	}{
-		{"Remove existing currency", "USD", false},
-		{"Remove non-existing currency", "JPY", true},
+		{"remove existing currency", "USD", false},
+		{"remove non-existing currency", "JPY", true},
 	}
 
 	for _, tt := range tests {
@@ -210,19 +210,19 @@ func TestCurrencyService_RemoveCurrency(t *testing.T) {
 
 			if tt.expectedError {
 				if err == nil {
-					t.Errorf("Expected an error, but got none")
+					t.Errorf("expected an error, but got none")
 				}
 			} else {
 				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
+					t.Errorf("unexpected error: %v", err)
 				}
 				_, err := repo.GetByCode(context.Background(), tt.code)
 				if err == nil {
-					t.Errorf("Currency should have been removed, but it still exists")
+					t.Errorf("currency should have been removed, but it still exists")
 				}
 				_, err = cache.Get(context.Background(), tt.code)
 				if err == nil {
-					t.Errorf("Currency should have been removed from cache, but it still exists")
+					t.Errorf("currency should have been removed from cache, but it still exists")
 				}
 			}
 		})
