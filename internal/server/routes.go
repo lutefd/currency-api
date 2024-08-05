@@ -7,20 +7,15 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func (s *Server) registerRoutes() {
+func (s *Server) registerRoutes(currencyService *service.CurrencyService) {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Get("/healthz", handler.HandlerReadiness)
-	router.Route("/currency", s.loadCurrencyRoutes)
-
-	s.router = router
-}
-
-func (s *Server) loadCurrencyRoutes(router chi.Router) {
-	currencyService := service.NewCurrencyService()
 	currencyHandler := handler.NewCurrencyHandler(currencyService)
-
-	router.Get("/convert", currencyHandler.ConvertCurrency)
-	router.Post("/", currencyHandler.AddCurrency)
-	router.Delete("/{code}", currencyHandler.RemoveCurrency)
+	router.Route("/currency", func(r chi.Router) {
+		r.Get("/convert", currencyHandler.ConvertCurrency)
+		r.Post("/", currencyHandler.AddCurrency)
+		r.Delete("/{code}", currencyHandler.RemoveCurrency)
+	})
+	s.router = router
 }
