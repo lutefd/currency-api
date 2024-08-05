@@ -66,3 +66,7 @@ func (r *PostgresCurrencyRepository) Delete(ctx context.Context, code string) er
 	}
 	return nil
 }
+
+func (r *PostgresCurrencyRepository) Close() error {
+	return r.db.Close()
+}
