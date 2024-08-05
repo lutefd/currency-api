@@ -32,13 +32,20 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if credentials.Username == "" || credentials.Password == "" {
+		logger.Errorf("Invalid input: username or password is empty")
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
 	if err != nil {
 		logger.Errorf("Failed to hash password: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	var user model.UserDB = model.UserDB{
+
+	user := model.UserDB{
 		ID:        uuid.New(),
 		Username:  credentials.Username,
 		Password:  string(hashedPassword),
@@ -47,6 +54,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+
 	if err := h.userRepo.Create(r.Context(), &user); err != nil {
 		logger.Errorf("Failed to create user: %v", err)
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
@@ -62,9 +70,15 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
 		logger.Errorf("Failed to decode login request: %v", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	if credentials.Username == "" || credentials.Password == "" {
+		logger.Errorf("Invalid input: username or password is empty")
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
 		return
 	}
 
