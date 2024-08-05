@@ -11,17 +11,24 @@ import (
 )
 
 func main() {
-	godotenv.Load(".env")
+	if err := godotenv.Load(".env"); err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
 	config, err := server.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	srv := server.NewServer(config)
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-	err = srv.Start(ctx)
+
+	srv, err := server.NewServer(config)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create server: %v", err)
 	}
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	if err := srv.Start(ctx); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
 }
