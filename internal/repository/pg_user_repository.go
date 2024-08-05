@@ -27,7 +27,7 @@ func NewPostgresUserRepository(connURL string) (*PostgresUserRepository, error) 
 	return &PostgresUserRepository{db: db}, nil
 }
 
-func (r *PostgresUserRepository) Create(ctx context.Context, user *model.User) error {
+func (r *PostgresUserRepository) Create(ctx context.Context, user *model.UserDB) error {
 	query := `INSERT INTO users (id, username, password, role, api_key, created_at, updated_at)
               VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	_, err := r.db.ExecContext(ctx, query, user.ID, user.Username, user.Password, user.Role, user.APIKey, user.CreatedAt, user.UpdatedAt)
@@ -37,9 +37,9 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *model.User) e
 	return nil
 }
 
-func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username string) (*model.UserDB, error) {
 	query := `SELECT id, username, password, role, api_key, created_at, updated_at FROM users WHERE username = $1`
-	var user model.User
+	var user model.UserDB
 	err := r.db.QueryRowContext(ctx, query, username).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Role, &user.APIKey, &user.CreatedAt, &user.UpdatedAt,
 	)
@@ -52,9 +52,9 @@ func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username str
 	return &user, nil
 }
 
-func (r *PostgresUserRepository) GetByAPIKey(ctx context.Context, apiKey string) (*model.User, error) {
+func (r *PostgresUserRepository) GetByAPIKey(ctx context.Context, apiKey string) (*model.UserDB, error) {
 	query := `SELECT id, username, password, role, api_key, created_at, updated_at FROM users WHERE api_key = $1`
-	var user model.User
+	var user model.UserDB
 	err := r.db.QueryRowContext(ctx, query, apiKey).Scan(
 		&user.ID, &user.Username, &user.Password, &user.Role, &user.APIKey, &user.CreatedAt, &user.UpdatedAt,
 	)
