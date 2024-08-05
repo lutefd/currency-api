@@ -5,26 +5,23 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 )
 
 type Server struct {
 	port   int
 	router http.Handler
+	config Config
 }
 
-func NewServer() *Server {
+func NewServer(config Config) *Server {
 	strPort := os.Getenv("SERVER_PORT")
 	if strPort == "" {
 		fmt.Println("port environment variable was not setted")
 	}
-	port, err := strconv.Atoi(strPort)
-	if err != nil {
-		panic(err)
-	}
 	server := &Server{
-		port: port,
+		port:   int(config.ServerPort),
+		config: config,
 	}
 	server.registerRoutes()
 	return server
