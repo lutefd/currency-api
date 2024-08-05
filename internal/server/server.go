@@ -21,12 +21,17 @@ type Server struct {
 	currencyRepo  repository.CurrencyRepository
 	currencyCache cache.Cache
 	externalAPI   worker.ExternalAPIClient
+	userRepo      repository.UserRepository
 }
 
 func NewServer(config Config) (*Server, error) {
 	repo, err := repository.NewPostgresCurrencyRepository(config.PostgresConn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize repository: %w", err)
+	}
+	userRepo, err := repository.NewPostgresUserRepository(config.PostgresConn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize user repository: %w", err)
 	}
 	redisCache, err := cache.NewRedisCache(config.RedisAddr, config.RedisPass)
 	if err != nil {
@@ -42,6 +47,7 @@ func NewServer(config Config) (*Server, error) {
 		currencyCache: redisCache,
 		externalAPI:   externalAPI,
 		rateUpdater:   rateUpdater,
+		userRepo:      userRepo,
 	}
 
 	server.registerRoutes(currencyService)
