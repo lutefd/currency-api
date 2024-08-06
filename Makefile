@@ -1,4 +1,4 @@
-# Simple Makefile for a Go project
+include .env
 
 # Build the application
 all: build
@@ -38,4 +38,21 @@ watch:
 	    fi; \
 	fi
 
-.PHONY: all build run test clean
+# Docker commands
+docker-build:
+	docker build -t myapp .
+
+docker-run:
+	docker run -p 8080:8080 myapp
+
+# DB commands
+migrate-up:
+	goose -dir ./sql/schema postgres "$(POSTGRES_CONN)" up
+
+migrate-down:
+	goose -dir ./sql/schema postgres "$(POSTGRES_CONN)" down
+
+seed:
+	go run ./sql/seed.go
+
+.PHONY: all build run test clean watch docker-build docker-run migrate-up migrate-down seed
