@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/repository"
@@ -31,6 +32,7 @@ func NewPartitionManager(repo repository.LogRepository) *PartitionManager {
 func (pm *PartitionManager) Start(ctx context.Context) error {
 	if err := pm.createInitialPartitions(ctx); err != nil {
 		Errorf("failed to create initial partitions: %s", err)
+		return fmt.Errorf("failed to create initial partitions: %w", err)
 	}
 
 	pm.cron.Start()
