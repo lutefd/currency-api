@@ -22,6 +22,7 @@ type Server struct {
 	currencyCache cache.Cache
 	externalAPI   worker.ExternalAPIClient
 	userRepo      repository.UserRepository
+	logRepo       repository.LogRepository
 }
 
 func NewServer(config Config) (*Server, error) {
@@ -33,6 +34,10 @@ func NewServer(config Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user repository: %w", err)
 	}
+	logRepo, err := repository.NewPostgresLogRepository(config.PostgresConn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize log repository: %w", err)
+	}
 	redisCache, err := cache.NewRedisCache(config.RedisAddr, config.RedisPass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize cache: %w", err)
@@ -41,7 +46,11 @@ func NewServer(config Config) (*Server, error) {
 	currencyService := service.NewCurrencyService(repo, redisCache, externalAPI)
 	userService := service.NewUserService(userRepo)
 	rateUpdater := worker.NewRateUpdater(repo, redisCache, externalAPI, 1*time.Hour)
-
+	logger.InitLogger(logRepo)
+	partManager := logger.NewPartitionManager(logRepo)
+	if err := partManager.Start(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to start partition manager: %w", err)
+	}
 	server := &Server{
 		config:        config,
 		currencyRepo:  repo,
@@ -49,6 +58,7 @@ func NewServer(config Config) (*Server, error) {
 		externalAPI:   externalAPI,
 		rateUpdater:   rateUpdater,
 		userRepo:      userRepo,
+		logRepo:       logRepo,
 	}
 
 	server.registerRoutes(currencyService, userService)
@@ -94,7 +104,10 @@ func (s *Server) Shutdown() error {
 		logger.Errorf("cache connection close error: %v", err)
 		return err
 	}
+	if err := logger.Shutdown(ctx); err != nil {
+		logger.Errorf("error shutting down logger: %v", err)
+	}
 
-	logger.Info("server shutdown complete")
+	fmt.Println("server shutdown complete")
 	return nil
 }
