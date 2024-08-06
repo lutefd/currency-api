@@ -12,6 +12,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const UserContextKey = "user"
+
 type AuthMiddleware struct {
 	userRepo repository.UserRepository
 }
@@ -29,18 +31,21 @@ var (
 func (am *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		apiKey := r.Header.Get("X-API-Key")
+
 		if apiKey == "" {
 			logger.Error("no API key provided")
 			http.Error(w, "no API key provided", http.StatusUnauthorized)
 			return
 		}
-		user, err := am.userRepo.GetByAPIKey(r.Context(), apiKey)
+		userDB, err := am.userRepo.GetByAPIKey(r.Context(), apiKey)
 		if err != nil {
 			logger.Errorf("invalid API key: %s", apiKey)
 			http.Error(w, "invalid API key", http.StatusUnauthorized)
 			return
 		}
-		ctx := context.WithValue(r.Context(), "user", user)
+
+		user := userDB.ToUser()
+		ctx := context.WithValue(r.Context(), UserContextKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -48,19 +53,20 @@ func (am *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 func RequireRole(role model.Role) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := r.Context().Value("user").(*model.User)
+
+			contextUser := r.Context().Value(UserContextKey)
+
+			user, ok := contextUser.(model.User)
 			if !ok {
-				logger.Error("user not found in context")
+				logger.Error("user not found in context or has unexpected type")
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
-
 			if user.Role != role {
 				logger.Errorf("user %s does not have required role %s", user.Username, role)
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
-
 			next.ServeHTTP(w, r)
 		})
 	}
