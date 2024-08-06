@@ -110,6 +110,51 @@ func (h *CurrencyHandler) AddCurrency(w http.ResponseWriter, r *http.Request) {
 	commons.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": "currency added successfully"})
 }
 
+func (h *CurrencyHandler) UpdateCurrency(w http.ResponseWriter, r *http.Request) {
+	code := strings.ToUpper(chi.URLParam(r, "code"))
+	if code == "" || len(code) != 3 {
+		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code")
+		return
+	}
+
+	var input struct {
+		Rate interface{} `json:"rate_to_usd"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		commons.RespondWithError(w, http.StatusBadRequest, "invalid request payload")
+		return
+	}
+
+	rate, err := parseRate(input.Rate)
+	if err != nil {
+		commons.RespondWithError(w, http.StatusBadRequest, "invalid rate: "+err.Error())
+		return
+	}
+
+	if rate <= 0 {
+		commons.RespondWithError(w, http.StatusBadRequest, "rate must be positive")
+		return
+	}
+
+	user, ok := r.Context().Value("user").(model.User)
+	if !ok {
+		commons.RespondWithError(w, http.StatusInternalServerError, "user information not available")
+		return
+	}
+
+	if err := h.currencyService.UpdateCurrency(r.Context(), code, rate, user.ID); err != nil {
+		if err == model.ErrCurrencyNotFound {
+			commons.RespondWithError(w, http.StatusNotFound, "currency not found")
+		} else {
+			commons.RespondWithError(w, http.StatusInternalServerError, "failed to update currency")
+		}
+		return
+	}
+
+	commons.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "currency updated successfully"})
+}
+
 func (h *CurrencyHandler) RemoveCurrency(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(chi.URLParam(r, "code"))
 

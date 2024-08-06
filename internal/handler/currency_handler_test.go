@@ -32,7 +32,7 @@ func (m *MockCurrencyService) AddCurrency(ctx context.Context, curr *model.Curre
 }
 func (m *MockCurrencyService) UpdateCurrency(ctx context.Context, code string, rate float64, updatedBy uuid.UUID) error {
 	args := m.Called(ctx, code, rate, updatedBy)
-	return args.Error(1)
+	return args.Error(0)
 }
 
 func (m *MockCurrencyService) RemoveCurrency(ctx context.Context, code string) error {
@@ -263,4 +263,110 @@ func TestRemoveCurrency(t *testing.T) {
 		assert.JSONEq(t, `{"error":"invalid currency code, must be 3 characters long following ISO 4217"}`, rr.Body.String())
 
 	})
+}
+
+func TestUpdateCurrency(t *testing.T) {
+	mockService := new(MockCurrencyService)
+	h := handler.NewCurrencyHandler(mockService)
+
+	tests := []struct {
+		name           string
+		code           string
+		payload        map[string]interface{}
+		expectedStatus int
+		expectedBody   string
+		mockBehavior   func()
+	}{
+		{
+			name: "Valid update with period",
+			code: "USD",
+			payload: map[string]interface{}{
+				"rate_to_usd": 1.5,
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   `{"message":"currency updated successfully"}`,
+			mockBehavior: func() {
+				mockService.On("UpdateCurrency", mock.Anything, "USD", 1.5, mock.AnythingOfType("uuid.UUID")).Return(nil).Once()
+			},
+		},
+		{
+			name: "Valid update with comma",
+			code: "EUR",
+			payload: map[string]interface{}{
+				"rate_to_usd": "0,95",
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   `{"message":"currency updated successfully"}`,
+			mockBehavior: func() {
+				mockService.On("UpdateCurrency", mock.Anything, "EUR", 0.95, mock.AnythingOfType("uuid.UUID")).Return(nil).Once()
+			},
+		},
+		{
+			name: "Negative rate",
+			code: "GBP",
+			payload: map[string]interface{}{
+				"rate_to_usd": -1.0,
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"rate must be positive"}`,
+			mockBehavior:   func() {},
+		},
+		{
+			name: "Invalid rate type",
+			code: "JPY",
+			payload: map[string]interface{}{
+				"rate_to_usd": "invalid",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid rate: strconv.ParseFloat: parsing \"invalid\": invalid syntax"}`,
+			mockBehavior:   func() {},
+		},
+		{
+			name:           "Missing rate",
+			code:           "CAD",
+			payload:        map[string]interface{}{},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid rate: unsupported rate type"}`,
+			mockBehavior:   func() {},
+		},
+		{
+			name: "Currency not found",
+			code: "XYZ",
+			payload: map[string]interface{}{
+				"rate_to_usd": 1.0,
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   `{"error":"currency not found"}`,
+			mockBehavior: func() {
+				mockService.On("UpdateCurrency", mock.Anything, "XYZ", 1.0, mock.AnythingOfType("uuid.UUID")).Return(model.ErrCurrencyNotFound).Once()
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockBehavior()
+
+			body, _ := json.Marshal(tt.payload)
+			req, _ := http.NewRequest("PUT", "/currency/"+tt.code, bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+
+			userID := uuid.New()
+			user := model.User{ID: userID, Username: "testuser", Role: model.RoleAdmin}
+			ctx := context.WithValue(req.Context(), api_middleware.UserContextKey, user)
+			req = req.WithContext(ctx)
+
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("code", tt.code)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+			rr := httptest.NewRecorder()
+
+			h.UpdateCurrency(rr, req)
+
+			assert.Equal(t, tt.expectedStatus, rr.Code)
+			assert.JSONEq(t, tt.expectedBody, rr.Body.String())
+			mockService.AssertExpectations(t)
+		})
+	}
 }
