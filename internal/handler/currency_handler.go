@@ -2,10 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/model"
@@ -29,22 +29,27 @@ func (h *CurrencyHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request
 	amountStr := r.URL.Query().Get("amount")
 
 	if from == "" || to == "" || (amountStr == "") {
-		commons.RespondWithError(w, http.StatusBadRequest, "Missing required parameters")
+		commons.RespondWithError(w, http.StatusBadRequest, "missing required parameters")
 		return
 	}
 	if len(from) != 3 || len(to) != 3 {
-		commons.RespondWithError(w, http.StatusBadRequest, "Invalid currency code, must be 3 characters long following ISO 4217")
+		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code, must be 3 characters long following ISO 4217")
 		return
 	}
-	amount, err := strconv.ParseFloat(amountStr, 64)
+	amount, err := parseAmount(amountStr)
 	if err != nil {
-		commons.RespondWithError(w, http.StatusBadRequest, "Invalid amount")
+		commons.RespondWithError(w, http.StatusBadRequest, "invalid amount")
+		return
+	}
+
+	if amount < 0 {
+		commons.RespondWithError(w, http.StatusBadRequest, "amount must be non-negative")
 		return
 	}
 
 	result, err := h.currencyService.Convert(r.Context(), from, to, amount)
 	if err != nil {
-		commons.RespondWithError(w, http.StatusInternalServerError, "Conversion failed")
+		commons.RespondWithError(w, http.StatusInternalServerError, "conversion failed")
 		return
 	}
 
@@ -58,16 +63,16 @@ func (h *CurrencyHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request
 
 func (h *CurrencyHandler) AddCurrency(w http.ResponseWriter, r *http.Request) {
 	var currency struct {
-		Code string  `json:"code"`
-		Rate float64 `json:"rate"`
+		Code string      `json:"code"`
+		Rate interface{} `json:"rate_to_usd"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&currency); err != nil {
 		commons.RespondWithError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
-	if currency.Code == "" || currency.Rate == 0 {
-		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code or rate")
+	if currency.Code == "" {
+		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code")
 		return
 	}
 	if len(currency.Code) != 3 {
@@ -75,19 +80,26 @@ func (h *CurrencyHandler) AddCurrency(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, ok := r.Context().Value("user").(*model.User)
+	user, ok := r.Context().Value("user").(model.User)
 	if !ok {
 		commons.RespondWithError(w, http.StatusInternalServerError, "user information not available")
 		return
 	}
+	rate, err := parseRate(currency.Rate)
+	if err != nil {
+		commons.RespondWithError(w, http.StatusBadRequest, "invalid rate: "+err.Error())
+		return
+	}
 
+	if rate <= 0 {
+		commons.RespondWithError(w, http.StatusBadRequest, "rate must be positive")
+		return
+	}
 	newCurrency := &model.Currency{
 		Code:      strings.ToUpper(currency.Code),
-		Rate:      currency.Rate,
+		Rate:      rate,
 		CreatedBy: user.ID,
 		UpdatedBy: user.ID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
 	}
 
 	if err := h.currencyService.AddCurrency(r.Context(), newCurrency); err != nil {
@@ -115,4 +127,19 @@ func (h *CurrencyHandler) RemoveCurrency(w http.ResponseWriter, r *http.Request)
 	}
 
 	commons.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "currency removed successfully"})
+}
+func parseAmount(amountStr string) (float64, error) {
+	amountStr = strings.Replace(amountStr, ",", ".", -1)
+	return strconv.ParseFloat(amountStr, 64)
+}
+func parseRate(rate interface{}) (float64, error) {
+	switch v := rate.(type) {
+	case float64:
+		return v, nil
+	case string:
+		v = strings.Replace(v, ",", ".", -1)
+		return strconv.ParseFloat(v, 64)
+	default:
+		return 0, fmt.Errorf("unsupported rate type")
+	}
 }
