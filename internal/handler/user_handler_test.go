@@ -1,4 +1,4 @@
-package handler
+package handler_test
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Lutefd/challenge-bravo/internal/handler"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,7 @@ func (m *MockUserService) Authenticate(ctx context.Context, username, password s
 
 func TestUserHandler_Register(t *testing.T) {
 	mockService := new(MockUserService)
-	handler := NewUserHandler(mockService)
+	handler := handler.NewUserHandler(mockService)
 
 	t.Run("Successful registration", func(t *testing.T) {
 		newUser := model.User{
@@ -115,7 +116,7 @@ func TestUserHandler_Register(t *testing.T) {
 
 func TestUserHandler_Login(t *testing.T) {
 	mockService := new(MockUserService)
-	handler := NewUserHandler(mockService)
+	handler := handler.NewUserHandler(mockService)
 
 	t.Run("Successful login", func(t *testing.T) {
 		authenticatedUser := model.User{
