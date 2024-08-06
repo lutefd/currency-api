@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/commons"
+	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/Lutefd/challenge-bravo/internal/service"
 	"github.com/go-chi/chi/v5"
 )
@@ -72,7 +74,23 @@ func (h *CurrencyHandler) AddCurrency(w http.ResponseWriter, r *http.Request) {
 		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code, must be 3 characters long following ISO 4217")
 		return
 	}
-	if err := h.currencyService.AddCurrency(r.Context(), currency.Code, currency.Rate); err != nil {
+
+	user, ok := r.Context().Value("user").(*model.User)
+	if !ok {
+		commons.RespondWithError(w, http.StatusInternalServerError, "user information not available")
+		return
+	}
+
+	newCurrency := &model.Currency{
+		Code:      strings.ToUpper(currency.Code),
+		Rate:      currency.Rate,
+		CreatedBy: user.ID,
+		UpdatedBy: user.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if err := h.currencyService.AddCurrency(r.Context(), newCurrency); err != nil {
 		commons.RespondWithError(w, http.StatusInternalServerError, "failed to add currency")
 		return
 	}

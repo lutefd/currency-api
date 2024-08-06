@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/Lutefd/challenge-bravo/internal/handler"
+	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -22,9 +24,13 @@ func (m *MockCurrencyService) Convert(ctx context.Context, from, to string, amou
 	return args.Get(0).(float64), args.Error(1)
 }
 
-func (m *MockCurrencyService) AddCurrency(ctx context.Context, code string, rate float64) error {
-	args := m.Called(ctx, code, rate)
+func (m *MockCurrencyService) AddCurrency(ctx context.Context, curr *model.Currency) error {
+	args := m.Called(ctx, curr)
 	return args.Error(0)
+}
+func (m *MockCurrencyService) UpdateCurrency(ctx context.Context, code string, rate float64, updatedBy uuid.UUID) error {
+	args := m.Called(ctx, code, rate, updatedBy)
+	return args.Error(1)
 }
 
 func (m *MockCurrencyService) RemoveCurrency(ctx context.Context, code string) error {
@@ -75,8 +81,14 @@ func TestAddCurrency(t *testing.T) {
 		assert.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
 
+		userID := uuid.New()
+		user := &model.User{ID: userID, Username: "testuser", Role: model.RoleAdmin}
+		ctx := context.WithValue(req.Context(), "user", user)
+		req = req.WithContext(ctx)
+
 		rr := httptest.NewRecorder()
-		mockService.On("AddCurrency", mock.Anything, "USD", 1.0).Return(nil)
+
+		mockService.On("AddCurrency", mock.Anything, mock.AnythingOfType("*model.Currency")).Return(nil).Once()
 
 		handler := http.HandlerFunc(h.AddCurrency)
 		handler.ServeHTTP(rr, req)
@@ -84,6 +96,10 @@ func TestAddCurrency(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rr.Code)
 		assert.JSONEq(t, `{"message":"currency added successfully"}`, rr.Body.String())
 		mockService.AssertExpectations(t)
+
+		mockService.AssertCalled(t, "AddCurrency", mock.Anything, mock.MatchedBy(func(c *model.Currency) bool {
+			return c.Code == "USD" && c.Rate == 1.0 && c.CreatedBy == userID && c.UpdatedBy == userID
+		}))
 	})
 
 	t.Run("Invalid Payload", func(t *testing.T) {
@@ -100,6 +116,20 @@ func TestAddCurrency(t *testing.T) {
 		assert.JSONEq(t, `{"error":"invalid currency code or rate"}`, rr.Body.String())
 	})
 
+	t.Run("No User in Context", func(t *testing.T) {
+		body := strings.NewReader(`{"code":"USD","rate":1.0}`)
+		req, err := http.NewRequest("POST", "/currency", body)
+		assert.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+
+		handler := http.HandlerFunc(h.AddCurrency)
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		assert.JSONEq(t, `{"error":"user information not available"}`, rr.Body.String())
+	})
 }
 
 func TestRemoveCurrency(t *testing.T) {
