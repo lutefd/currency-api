@@ -23,8 +23,13 @@ func (s *Server) registerRoutes(currencyService *service.CurrencyService, userSe
 	})
 	router.Route("/currency", func(r chi.Router) {
 		r.Get("/convert", currencyHandler.ConvertCurrency)
-		r.With(authMiddleware.Authenticate, api_middleware.RequireRole(model.RoleAdmin)).Post("/", currencyHandler.AddCurrency)
-		r.With(authMiddleware.Authenticate, api_middleware.RequireRole(model.RoleAdmin)).Delete("/{code}", currencyHandler.RemoveCurrency)
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.Authenticate)
+			r.Use(api_middleware.RequireRole(model.RoleAdmin))
+			r.Post("/", currencyHandler.AddCurrency)
+			r.Put("/{code}", currencyHandler.UpdateCurrency)
+			r.Delete("/{code}", currencyHandler.RemoveCurrency)
+		})
 	})
 	s.router = router
 }
