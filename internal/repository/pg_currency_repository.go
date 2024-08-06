@@ -28,9 +28,12 @@ func NewPostgresCurrencyRepository(connURL string) (*PostgresCurrencyRepository,
 }
 
 func (r *PostgresCurrencyRepository) GetByCode(ctx context.Context, code string) (*model.Currency, error) {
-	query := `SELECT code, rate, updated_at FROM currencies WHERE code = $1`
+	query := `SELECT code, rate, updated_at, created_by, updated_by, created_at FROM currencies WHERE code = $1`
 	var currency model.Currency
-	err := r.db.QueryRowContext(ctx, query, code).Scan(&currency.Code, &currency.Rate, &currency.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, query, code).Scan(
+		&currency.Code, &currency.Rate, &currency.UpdatedAt,
+		&currency.CreatedBy, &currency.UpdatedBy, &currency.CreatedAt,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("currency not found")
@@ -41,8 +44,12 @@ func (r *PostgresCurrencyRepository) GetByCode(ctx context.Context, code string)
 }
 
 func (r *PostgresCurrencyRepository) Create(ctx context.Context, currency *model.Currency) error {
-	query := `INSERT INTO currencies (code, rate, updated_at) VALUES ($1, $2, $3)`
-	_, err := r.db.ExecContext(ctx, query, currency.Code, currency.Rate, currency.UpdatedAt)
+	query := `INSERT INTO currencies (code, rate, updated_at, created_by, updated_by, created_at)
+              VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err := r.db.ExecContext(ctx, query,
+		currency.Code, currency.Rate, currency.UpdatedAt,
+		currency.CreatedBy, currency.UpdatedBy, currency.CreatedAt,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create currency: %w", err)
 	}
@@ -50,8 +57,10 @@ func (r *PostgresCurrencyRepository) Create(ctx context.Context, currency *model
 }
 
 func (r *PostgresCurrencyRepository) Update(ctx context.Context, currency *model.Currency) error {
-	query := `UPDATE currencies SET rate = $2, updated_at = $3 WHERE code = $1`
-	_, err := r.db.ExecContext(ctx, query, currency.Code, currency.Rate, currency.UpdatedAt)
+	query := `UPDATE currencies SET rate = $2, updated_at = $3, updated_by = $4 WHERE code = $1`
+	_, err := r.db.ExecContext(ctx, query,
+		currency.Code, currency.Rate, currency.UpdatedAt, currency.UpdatedBy,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to update currency: %w", err)
 	}
