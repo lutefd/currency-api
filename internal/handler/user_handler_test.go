@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,40 +13,56 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/crypto/bcrypt"
 )
 
-type MockUserRepository struct {
+type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserRepository) Create(ctx context.Context, user *model.UserDB) error {
-	args := m.Called(ctx, user)
-	return args.Error(0)
-}
-
-func (m *MockUserRepository) GetByUsername(ctx context.Context, username string) (*model.UserDB, error) {
+func (m *MockUserService) GetByUsername(ctx context.Context, username string) (model.User, error) {
 	args := m.Called(ctx, username)
-	return args.Get(0).(*model.UserDB), args.Error(1)
-}
-func (m *MockUserRepository) GetByAPIKey(ctx context.Context, apiKey string) (*model.UserDB, error) {
-	args := m.Called(ctx, apiKey)
-	return args.Get(0).(*model.UserDB), args.Error(1)
+	return args.Get(0).(model.User), args.Error(1)
 }
 
-func (m *MockUserRepository) Close() error {
-	args := m.Called()
+func (m *MockUserService) GetByAPIKey(ctx context.Context, apiKey string) (model.User, error) {
+	args := m.Called(ctx, apiKey)
+	return args.Get(0).(model.User), args.Error(1)
+}
+
+func (m *MockUserService) Create(ctx context.Context, username, password string) (model.User, error) {
+	args := m.Called(ctx, username, password)
+	return args.Get(0).(model.User), args.Error(1)
+}
+
+func (m *MockUserService) Update(ctx context.Context, username, password string) error {
+	args := m.Called(ctx, username, password)
 	return args.Error(0)
 }
 
-func TestRegister(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	handler := NewUserHandler(mockRepo)
+func (m *MockUserService) Delete(ctx context.Context, username string) error {
+	args := m.Called(ctx, username)
+	return args.Error(0)
+}
+
+func (m *MockUserService) Authenticate(ctx context.Context, username, password string) (model.User, error) {
+	args := m.Called(ctx, username, password)
+	return args.Get(0).(model.User), args.Error(1)
+}
+
+func TestUserHandler_Register(t *testing.T) {
+	mockService := new(MockUserService)
+	handler := NewUserHandler(mockService)
 
 	t.Run("Successful registration", func(t *testing.T) {
-		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*model.UserDB")).Return(nil).Once()
+		newUser := model.User{
+			ID:       uuid.New(),
+			Username: "newuser",
+			Role:     model.RoleUser,
+			APIKey:   "test-api-key",
+		}
+		mockService.On("Create", mock.Anything, "newuser", "password123").Return(newUser, nil).Once()
 
-		body := bytes.NewBufferString(`{"username":"testuser","password":"testpass"}`)
+		body := bytes.NewBufferString(`{"username":"newuser","password":"password123"}`)
 		req, _ := http.NewRequest("POST", "/register", body)
 		rr := httptest.NewRecorder()
 
@@ -53,14 +70,12 @@ func TestRegister(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, rr.Code)
 
-		var response model.UserDB
+		var response model.User
 		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.NotEmpty(t, response.ID)
-		assert.Equal(t, "testuser", response.Username)
-		assert.Empty(t, response.Password) // Password should not be returned
-		assert.Equal(t, model.RoleUser, response.Role)
-		assert.NotEmpty(t, response.APIKey)
+		assert.Equal(t, newUser, response)
+
+		mockService.AssertExpectations(t)
 	})
 
 	t.Run("Invalid request payload", func(t *testing.T) {
@@ -83,35 +98,35 @@ func TestRegister(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
 	})
 
-	t.Run("Repository error", func(t *testing.T) {
-		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*model.UserDB")).Return(assert.AnError).Once()
+	t.Run("Service error", func(t *testing.T) {
+		mockService.On("Create", mock.Anything, "newuser", "password123").Return(model.User{}, errors.New("service error")).Once()
 
-		body := bytes.NewBufferString(`{"username":"testuser","password":"testpass"}`)
+		body := bytes.NewBufferString(`{"username":"newuser","password":"password123"}`)
 		req, _ := http.NewRequest("POST", "/register", body)
 		rr := httptest.NewRecorder()
 
 		handler.Register(rr, req)
 
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+
+		mockService.AssertExpectations(t)
 	})
 }
 
-func TestLogin(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	handler := NewUserHandler(mockRepo)
+func TestUserHandler_Login(t *testing.T) {
+	mockService := new(MockUserService)
+	handler := NewUserHandler(mockService)
 
 	t.Run("Successful login", func(t *testing.T) {
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("testpass"), bcrypt.DefaultCost)
-		mockUser := &model.UserDB{
+		authenticatedUser := model.User{
 			ID:       uuid.New(),
 			Username: "testuser",
-			Password: string(hashedPassword),
 			Role:     model.RoleUser,
 			APIKey:   "test-api-key",
 		}
-		mockRepo.On("GetByUsername", mock.Anything, "testuser").Return(mockUser, nil).Once()
+		mockService.On("Authenticate", mock.Anything, "testuser", "password123").Return(authenticatedUser, nil).Once()
 
-		body := bytes.NewBufferString(`{"username":"testuser","password":"testpass"}`)
+		body := bytes.NewBufferString(`{"username":"testuser","password":"password123"}`)
 		req, _ := http.NewRequest("POST", "/login", body)
 		rr := httptest.NewRecorder()
 
@@ -122,10 +137,9 @@ func TestLogin(t *testing.T) {
 		var response model.User
 		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, mockUser.ID, response.ID)
-		assert.Equal(t, "testuser", response.Username)
-		assert.Equal(t, model.RoleUser, response.Role)
-		assert.Equal(t, "test-api-key", response.APIKey)
+		assert.Equal(t, authenticatedUser, response)
+
+		mockService.AssertExpectations(t)
 	})
 
 	t.Run("Invalid request payload", func(t *testing.T) {
@@ -148,35 +162,17 @@ func TestLogin(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
 	})
 
-	t.Run("User not found", func(t *testing.T) {
-		mockRepo.On("GetByUsername", mock.Anything, "nonexistent").Return((*model.UserDB)(nil), assert.AnError).Once()
+	t.Run("Authentication failure", func(t *testing.T) {
+		mockService.On("Authenticate", mock.Anything, "testuser", "wrongpassword").Return(model.User{}, errors.New("invalid credentials")).Once()
 
-		body := bytes.NewBufferString(`{"username":"nonexistent","password":"testpass"}`)
+		body := bytes.NewBufferString(`{"username":"testuser","password":"wrongpassword"}`)
 		req, _ := http.NewRequest("POST", "/login", body)
 		rr := httptest.NewRecorder()
 
 		handler.Login(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code)
-	})
 
-	t.Run("Incorrect password", func(t *testing.T) {
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("correctpass"), bcrypt.DefaultCost)
-		mockUser := &model.UserDB{
-			ID:       uuid.New(),
-			Username: "testuser",
-			Password: string(hashedPassword),
-			Role:     model.RoleUser,
-			APIKey:   "test-api-key",
-		}
-		mockRepo.On("GetByUsername", mock.Anything, "testuser").Return(mockUser, nil).Once()
-
-		body := bytes.NewBufferString(`{"username":"testuser","password":"wrongpass"}`)
-		req, _ := http.NewRequest("POST", "/login", body)
-		rr := httptest.NewRecorder()
-
-		handler.Login(rr, req)
-
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		mockService.AssertExpectations(t)
 	})
 }
