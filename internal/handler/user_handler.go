@@ -3,22 +3,18 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/logger"
-	"github.com/Lutefd/challenge-bravo/internal/model"
-	"github.com/Lutefd/challenge-bravo/internal/repository"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/Lutefd/challenge-bravo/internal/service"
 )
 
 type UserHandler struct {
-	userRepo repository.UserRepository
+	userService service.UserServiceInterface
 }
 
-func NewUserHandler(userRepo repository.UserRepository) *UserHandler {
-	return &UserHandler{userRepo: userRepo}
+func NewUserHandler(userService service.UserServiceInterface) *UserHandler {
+	return &UserHandler{userService: userService}
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -38,30 +34,13 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
+	user, err := h.userService.Create(r.Context(), credentials.Username, credentials.Password)
 	if err != nil {
-		logger.Errorf("Failed to hash password: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	user := model.UserDB{
-		ID:        uuid.New(),
-		Username:  credentials.Username,
-		Password:  string(hashedPassword),
-		Role:      model.RoleUser,
-		APIKey:    generateAPIKey(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	if err := h.userRepo.Create(r.Context(), &user); err != nil {
 		logger.Errorf("Failed to create user: %v", err)
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
 
-	user.Password = ""
 	commons.RespondWithJSON(w, http.StatusCreated, user)
 }
 
@@ -72,33 +51,23 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-		logger.Errorf("failed to decode login request: %v", err)
-		http.Error(w, "invalid request payload", http.StatusBadRequest)
+		logger.Errorf("Failed to decode login request: %v", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
+
 	if credentials.Username == "" || credentials.Password == "" {
-		logger.Errorf("invalid input: username or password is empty")
-		http.Error(w, "username and password are required", http.StatusBadRequest)
+		logger.Errorf("Invalid input: username or password is empty")
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
 		return
 	}
 
-	userDB, err := h.userRepo.GetByUsername(r.Context(), credentials.Username)
+	user, err := h.userService.Authenticate(r.Context(), credentials.Username, credentials.Password)
 	if err != nil {
-		logger.Errorf("failed to get user: %v", err)
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		logger.Errorf("Authentication failed: %v", err)
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(userDB.Password), []byte(credentials.Password)); err != nil {
-		logger.Errorf("invalid password for user %s: %v", credentials.Username, err)
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	user := userDB.ToUser()
 	commons.RespondWithJSON(w, http.StatusOK, user)
-}
-
-func generateAPIKey() string {
-	return uuid.New().String()
 }

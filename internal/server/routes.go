@@ -9,14 +9,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func (s *Server) registerRoutes(currencyService *service.CurrencyService) {
+func (s *Server) registerRoutes(currencyService *service.CurrencyService, userService *service.UserService) {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	authMiddleware := api_middleware.NewAuthMiddleware(s.userRepo)
 
 	router.Get("/healthz", handler.HandlerReadiness)
 	currencyHandler := handler.NewCurrencyHandler(currencyService)
-	userHandler := handler.NewUserHandler(s.userRepo)
+	userHandler := handler.NewUserHandler(userService)
 	router.Route("/auth", func(r chi.Router) {
 		r.With(api_middleware.RateLimitMiddleware).Post("/register", userHandler.Register)
 		r.With(api_middleware.RateLimitMiddleware).Post("/login", userHandler.Login)

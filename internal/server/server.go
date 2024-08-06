@@ -39,6 +39,7 @@ func NewServer(config Config) (*Server, error) {
 	}
 	externalAPI := worker.NewOpenExchangeRatesClient(config.APIKey)
 	currencyService := service.NewCurrencyService(repo, redisCache, externalAPI)
+	userService := service.NewUserService(userRepo)
 	rateUpdater := worker.NewRateUpdater(repo, redisCache, externalAPI, 1*time.Hour)
 
 	server := &Server{
@@ -50,7 +51,7 @@ func NewServer(config Config) (*Server, error) {
 		userRepo:      userRepo,
 	}
 
-	server.registerRoutes(currencyService)
+	server.registerRoutes(currencyService, userService)
 
 	server.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", config.ServerPort),
