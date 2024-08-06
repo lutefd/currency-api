@@ -18,5 +18,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *model.UserDB) error
 	GetByUsername(ctx context.Context, username string) (*model.UserDB, error)
 	GetByAPIKey(ctx context.Context, apiKey string) (*model.UserDB, error)
+	Update(ctx context.Context, user *model.UserDB) error
+	Delete(ctx context.Context, username string) error
 	Close() error
 }

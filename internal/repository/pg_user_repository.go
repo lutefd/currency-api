@@ -67,6 +67,45 @@ func (r *PostgresUserRepository) GetByAPIKey(ctx context.Context, apiKey string)
 	return &user, nil
 }
 
+func (r *PostgresUserRepository) Update(ctx context.Context, user *model.UserDB) error {
+	query := `UPDATE users
+              SET password = $1, role = $2, api_key = $3, updated_at = $4
+              WHERE username = $5`
+	result, err := r.db.ExecContext(ctx, query, user.Password, user.Role, user.APIKey, user.UpdatedAt, user.Username)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+func (r *PostgresUserRepository) Delete(ctx context.Context, username string) error {
+	query := `DELETE FROM users WHERE username = $1`
+	result, err := r.db.ExecContext(ctx, query, username)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
 func (r *PostgresUserRepository) Close() error {
 	return r.db.Close()
 }
