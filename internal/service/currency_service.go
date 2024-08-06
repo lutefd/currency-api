@@ -10,6 +10,7 @@ import (
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/Lutefd/challenge-bravo/internal/repository"
 	"github.com/Lutefd/challenge-bravo/internal/worker"
+	"github.com/google/uuid"
 )
 
 type CurrencyService struct {
@@ -76,24 +77,39 @@ func (s *CurrencyService) getRate(ctx context.Context, code string) (float64, er
 	return rate, nil
 }
 
-func (s *CurrencyService) AddCurrency(ctx context.Context, code string, rate float64) error {
-	_, err := s.repo.GetByCode(ctx, code)
+func (s *CurrencyService) AddCurrency(ctx context.Context, currency *model.Currency) error {
+	_, err := s.repo.GetByCode(ctx, currency.Code)
 	if err == nil {
-		return fmt.Errorf("currency %s already exists", code)
-	}
-
-	currency := &model.Currency{
-		Code:      strings.ToUpper(code),
-		Rate:      rate,
-		UpdatedAt: time.Now(),
+		return fmt.Errorf("currency %s already exists", currency.Code)
 	}
 
 	if err := s.repo.Create(ctx, currency); err != nil {
 		return fmt.Errorf("failed to add currency to repository: %w", err)
 	}
 
+	if err := s.cache.Set(ctx, currency.Code, currency.Rate, 1*time.Hour); err != nil {
+		fmt.Printf("failed to update cache for new currency %s: %v\n", currency.Code, err)
+	}
+
+	return nil
+}
+
+func (s *CurrencyService) UpdateCurrency(ctx context.Context, code string, rate float64, updatedBy uuid.UUID) error {
+	currency, err := s.repo.GetByCode(ctx, code)
+	if err != nil {
+		return fmt.Errorf("currency %s not found", code)
+	}
+
+	currency.Rate = rate
+	currency.UpdatedAt = time.Now()
+	currency.UpdatedBy = updatedBy
+
+	if err := s.repo.Update(ctx, currency); err != nil {
+		return fmt.Errorf("failed to update currency in repository: %w", err)
+	}
+
 	if err := s.cache.Set(ctx, code, rate, 1*time.Hour); err != nil {
-		fmt.Printf("failed to update cache for new currency %s: %v\n", code, err)
+		fmt.Printf("failed to update cache for currency %s: %v\n", code, err)
 	}
 
 	return nil

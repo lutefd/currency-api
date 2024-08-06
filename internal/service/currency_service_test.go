@@ -8,6 +8,8 @@ import (
 
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/Lutefd/challenge-bravo/internal/service"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 type mockRepository struct {
@@ -15,10 +17,11 @@ type mockRepository struct {
 }
 
 func (m *mockRepository) GetByCode(ctx context.Context, code string) (*model.Currency, error) {
-	if currency, ok := m.currencies[code]; ok {
-		return currency, nil
+	currency, ok := m.currencies[code]
+	if !ok {
+		return nil, errors.New("currency not found")
 	}
-	return nil, errors.New("currency not found")
+	return currency, nil
 }
 
 func (m *mockRepository) Create(ctx context.Context, currency *model.Currency) error {
@@ -27,6 +30,9 @@ func (m *mockRepository) Create(ctx context.Context, currency *model.Currency) e
 }
 
 func (m *mockRepository) Update(ctx context.Context, currency *model.Currency) error {
+	if _, ok := m.currencies[currency.Code]; !ok {
+		return errors.New("currency not found")
+	}
 	m.currencies[currency.Code] = currency
 	return nil
 }
@@ -131,51 +137,111 @@ func TestCurrencyService_Convert(t *testing.T) {
 
 func TestCurrencyService_AddCurrency(t *testing.T) {
 	repo := &mockRepository{
-		currencies: map[string]*model.Currency{},
+		currencies: make(map[string]*model.Currency),
 	}
 	cache := &mockCache{
-		data: map[string]float64{},
+		data: make(map[string]float64),
 	}
 	externalAPI := &mockExternalAPI{
-		rates: map[string]float64{},
+		rates: make(map[string]float64),
 	}
 
 	currencyService := service.NewCurrencyService(repo, cache, externalAPI)
 
-	tests := []struct {
-		name          string
-		code          string
-		rate          float64
-		expectedError bool
-	}{
-		{"Add new currency", "JPY", 110.0, false},
-		{"Add existing currency", "JPY", 1.0, true},
-	}
+	ctx := context.Background()
+	userID := uuid.New()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := currencyService.AddCurrency(context.Background(), tt.code, tt.rate)
+	t.Run("Add new currency", func(t *testing.T) {
+		newCurrency := &model.Currency{
+			Code:      "JPY",
+			Rate:      110.0,
+			CreatedBy: userID,
+			UpdatedBy: userID,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
 
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error, but got none")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				currency, err := repo.GetByCode(context.Background(), tt.code)
-				if err != nil {
-					t.Errorf("failed to get added currency: %v", err)
-				}
-				if currency.Rate != tt.rate {
-					t.Errorf("expected rate %f, but got %f", tt.rate, currency.Rate)
-				}
-			}
-		})
-	}
+		err := currencyService.AddCurrency(ctx, newCurrency)
+
+		assert.NoError(t, err)
+		assert.Equal(t, newCurrency, repo.currencies["JPY"])
+		assert.Equal(t, 110.0, cache.data["JPY"])
+	})
+
+	t.Run("Add existing currency", func(t *testing.T) {
+		existingCurrency := &model.Currency{
+			Code:      "USD",
+			Rate:      1.0,
+			CreatedBy: userID,
+			UpdatedBy: userID,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		repo.currencies["USD"] = existingCurrency
+
+		newCurrency := &model.Currency{
+			Code:      "USD",
+			Rate:      1.1,
+			CreatedBy: userID,
+			UpdatedBy: userID,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		err := currencyService.AddCurrency(ctx, newCurrency)
+
+		assert.Error(t, err)
+		assert.Equal(t, existingCurrency, repo.currencies["USD"])
+	})
 }
 
+func TestCurrencyService_UpdateCurrency(t *testing.T) {
+	repo := &mockRepository{
+		currencies: make(map[string]*model.Currency),
+	}
+	cache := &mockCache{
+		data: make(map[string]float64),
+	}
+	externalAPI := &mockExternalAPI{
+		rates: make(map[string]float64),
+	}
+
+	currencyService := service.NewCurrencyService(repo, cache, externalAPI)
+
+	ctx := context.Background()
+	userID := uuid.New()
+
+	t.Run("Update existing currency", func(t *testing.T) {
+		existingCurrency := &model.Currency{
+			Code:      "EUR",
+			Rate:      0.85,
+			CreatedBy: uuid.New(),
+			UpdatedBy: uuid.New(),
+			CreatedAt: time.Now().Add(-24 * time.Hour),
+			UpdatedAt: time.Now().Add(-24 * time.Hour),
+		}
+		repo.currencies["EUR"] = existingCurrency
+
+		originalUpdatedAt := existingCurrency.UpdatedAt
+
+		err := currencyService.UpdateCurrency(ctx, "EUR", 0.82, userID)
+
+		assert.NoError(t, err)
+		updatedCurrency := repo.currencies["EUR"]
+		assert.Equal(t, 0.82, updatedCurrency.Rate)
+		assert.Equal(t, userID, updatedCurrency.UpdatedBy)
+		assert.True(t, updatedCurrency.UpdatedAt.After(originalUpdatedAt), "UpdatedAt should be later than the original time")
+		assert.Equal(t, 0.82, cache.data["EUR"])
+	})
+
+	t.Run("Update non-existing currency", func(t *testing.T) {
+		err := currencyService.UpdateCurrency(ctx, "GBP", 0.75, userID)
+
+		assert.Error(t, err)
+		assert.NotContains(t, repo.currencies, "GBP")
+		assert.NotContains(t, cache.data, "GBP")
+	})
+}
 func TestCurrencyService_RemoveCurrency(t *testing.T) {
 	repo := &mockRepository{
 		currencies: map[string]*model.Currency{
