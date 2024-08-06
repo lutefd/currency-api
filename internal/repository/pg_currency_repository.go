@@ -36,7 +36,7 @@ func (r *PostgresCurrencyRepository) GetByCode(ctx context.Context, code string)
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("currency not found")
+			return nil, model.ErrCurrencyNotFound
 		}
 		return nil, fmt.Errorf("failed to get currency: %w", err)
 	}

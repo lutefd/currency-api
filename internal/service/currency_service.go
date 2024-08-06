@@ -97,7 +97,10 @@ func (s *CurrencyService) AddCurrency(ctx context.Context, currency *model.Curre
 func (s *CurrencyService) UpdateCurrency(ctx context.Context, code string, rate float64, updatedBy uuid.UUID) error {
 	currency, err := s.repo.GetByCode(ctx, code)
 	if err != nil {
-		return fmt.Errorf("currency %s not found", code)
+		if err == model.ErrCurrencyNotFound {
+			return model.ErrCurrencyNotFound
+		}
+		return fmt.Errorf("failed to get currency: %w", err)
 	}
 
 	currency.Rate = rate

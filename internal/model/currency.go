@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,3 +21,5 @@ type ExchangeRates struct {
 	Base      string             `json:"base"`
 	Rates     map[string]float64 `json:"rates"`
 }
+
+var ErrCurrencyNotFound = errors.New("currency not found")
