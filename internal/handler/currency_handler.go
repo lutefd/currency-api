@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/model"
@@ -100,6 +101,8 @@ func (h *CurrencyHandler) AddCurrency(w http.ResponseWriter, r *http.Request) {
 		Rate:      rate,
 		CreatedBy: user.ID,
 		UpdatedBy: user.ID,
+		UpdatedAt: time.Now(),
+		CreatedAt: time.Now(),
 	}
 
 	if err := h.currencyService.AddCurrency(r.Context(), newCurrency); err != nil {
