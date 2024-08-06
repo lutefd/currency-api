@@ -12,10 +12,10 @@ import (
 )
 
 type CurrencyHandler struct {
-	currencyService *service.CurrencyService
+	currencyService service.CurrencyServiceInterface
 }
 
-func NewCurrencyHandler(currencyService *service.CurrencyService) *CurrencyHandler {
+func NewCurrencyHandler(currencyService service.CurrencyServiceInterface) *CurrencyHandler {
 	return &CurrencyHandler{
 		currencyService: currencyService,
 	}
@@ -91,7 +91,6 @@ func (h *CurrencyHandler) RemoveCurrency(w http.ResponseWriter, r *http.Request)
 		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code, must be 3 characters long following ISO 4217")
 		return
 	}
-
 	if err := h.currencyService.RemoveCurrency(r.Context(), code); err != nil {
 		commons.RespondWithError(w, http.StatusInternalServerError, "failed to remove currency")
 		return
