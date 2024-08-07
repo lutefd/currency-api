@@ -1,11 +1,13 @@
-package api_middleware
+package api_middleware_test
 
 import (
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	api_middleware "github.com/Lutefd/challenge-bravo/internal/middleware"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +57,7 @@ func createTestRequest(apiKey string) *http.Request {
 
 func TestAuthMiddleware_Authenticate(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	authMiddleware := NewAuthMiddleware(mockRepo)
+	authMiddleware := api_middleware.NewAuthMiddleware(mockRepo)
 
 	tests := []struct {
 		name           string
@@ -79,7 +81,7 @@ func TestAuthMiddleware_Authenticate(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			checkUser: func(t *testing.T, r *http.Request) {
-				user, ok := r.Context().Value(UserContextKey).(model.User)
+				user, ok := r.Context().Value(api_middleware.UserContextKey).(model.User)
 				assert.True(t, ok)
 				assert.Equal(t, "testuser", user.Username)
 			},
@@ -156,7 +158,7 @@ func TestRequireRole(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			if tt.user != (model.User{}) {
-				ctx := context.WithValue(req.Context(), UserContextKey, tt.user)
+				ctx := context.WithValue(req.Context(), api_middleware.UserContextKey, tt.user)
 				req = req.WithContext(ctx)
 			}
 
@@ -164,7 +166,7 @@ func TestRequireRole(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			handler := RequireRole(tt.requiredRole)(nextHandler)
+			handler := api_middleware.RequireRole(tt.requiredRole)(nextHandler)
 			handler.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
@@ -181,14 +183,15 @@ func TestRateLimitMiddleware(t *testing.T) {
 		{
 			name: "Under rate limit",
 			setupLimiter: func() {
-				limiter.SetLimit(rate.Inf)
+				api_middleware.Limiter.SetLimit(rate.Inf)
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name: "Exceeds rate limit",
 			setupLimiter: func() {
-				limiter.SetLimit(rate.Limit(0))
+				api_middleware.Limiter = rate.NewLimiter(rate.Every(time.Second), 1)
+				_ = api_middleware.Limiter.Allow()
 			},
 			expectedStatus: http.StatusTooManyRequests,
 		},
@@ -205,7 +208,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			handler := RateLimitMiddleware(nextHandler)
+			handler := api_middleware.RateLimitMiddleware(nextHandler)
 			handler.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)

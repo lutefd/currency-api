@@ -23,7 +23,7 @@ func NewAuthMiddleware(userRepo repository.UserRepository) *AuthMiddleware {
 }
 
 var (
-	limiter = rate.NewLimiter(rate.Every(time.Second), 10)
+	Limiter = rate.NewLimiter(rate.Every(time.Second), 10)
 	clients = make(map[string]*rate.Limiter)
 	mu      sync.Mutex
 )
@@ -73,7 +73,7 @@ func RequireRole(role model.Role) func(http.Handler) http.Handler {
 }
 func RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !limiter.Allow() {
+		if !Limiter.Allow() {
 			logger.Errorf("rate limit exceeded for IP: %s", r.RemoteAddr)
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
