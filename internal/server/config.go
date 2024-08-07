@@ -14,6 +14,11 @@ type Config struct {
 	APIKey       string
 }
 
+const (
+	decimalBase = 10
+	bitSize     = 16
+)
+
 func LoadConfig() (Config, error) {
 	var config Config
 	var errors []string
@@ -42,14 +47,13 @@ func LoadConfig() (Config, error) {
 	if serverPort == "" {
 		errors = append(errors, "SERVER_PORT is not set")
 	} else {
-		parsedServerPort, err := strconv.ParseUint(serverPort, 10, 16)
+		parsedServerPort, err := strconv.ParseUint(serverPort, decimalBase, bitSize)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("invalid SERVER_PORT: %s", err))
 		} else {
 			config.ServerPort = uint16(parsedServerPort)
 		}
 	}
-
 	if len(errors) > 0 {
 		for _, err := range errors {
 			fmt.Println("Configuration Error:", err)
