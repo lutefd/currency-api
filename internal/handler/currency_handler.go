@@ -33,10 +33,15 @@ func (h *CurrencyHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request
 		commons.RespondWithError(w, http.StatusBadRequest, "missing required parameters")
 		return
 	}
-	if len(from) != 3 || len(to) != 3 {
-		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code, must be 3 characters long following ISO 4217")
+	if len(from) > commons.AllowedCurrencyLength || len(to) > commons.AllowedCurrencyLength {
+		commons.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid currency code, must be up to %d characters", commons.AllowedCurrencyLength))
 		return
 	}
+	if len(from) < commons.MinimumCurrencyLength || len(to) < commons.MinimumCurrencyLength {
+		commons.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid currency code, must be at least %d characters", commons.MinimumCurrencyLength))
+		return
+	}
+
 	amount, err := parseAmount(amountStr)
 	if err != nil {
 		commons.RespondWithError(w, http.StatusBadRequest, "invalid amount")
@@ -76,8 +81,13 @@ func (h *CurrencyHandler) AddCurrency(w http.ResponseWriter, r *http.Request) {
 		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code")
 		return
 	}
-	if len(currency.Code) != 3 {
-		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code, must be 3 characters long following ISO 4217")
+	if len(currency.Code) > commons.AllowedCurrencyLength {
+		commons.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid currency code, must be up to %d characters", commons.AllowedCurrencyLength))
+		return
+	}
+
+	if len(currency.Code) < commons.MinimumCurrencyLength {
+		commons.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid currency code, must be at least %d characters", commons.MinimumCurrencyLength))
 		return
 	}
 
@@ -115,7 +125,7 @@ func (h *CurrencyHandler) AddCurrency(w http.ResponseWriter, r *http.Request) {
 
 func (h *CurrencyHandler) UpdateCurrency(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(chi.URLParam(r, "code"))
-	if code == "" || len(code) != 3 {
+	if code == "" || len(code) > commons.AllowedCurrencyLength || len(code) < commons.MinimumCurrencyLength {
 		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code")
 		return
 	}
@@ -165,8 +175,12 @@ func (h *CurrencyHandler) RemoveCurrency(w http.ResponseWriter, r *http.Request)
 		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code")
 		return
 	}
-	if len(code) != 3 {
-		commons.RespondWithError(w, http.StatusBadRequest, "invalid currency code, must be 3 characters long following ISO 4217")
+	if len(code) > commons.AllowedCurrencyLength {
+		commons.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid currency code, must be up to %d characters", commons.AllowedCurrencyLength))
+		return
+	}
+	if len(code) < commons.MinimumCurrencyLength {
+		commons.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid currency code, must be at least %d characters", commons.MinimumCurrencyLength))
 		return
 	}
 	if err := h.currencyService.RemoveCurrency(r.Context(), code); err != nil {

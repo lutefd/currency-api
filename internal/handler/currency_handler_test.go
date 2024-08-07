@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/handler"
-	api_middleware "github.com/Lutefd/challenge-bravo/internal/middleware"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -181,13 +182,23 @@ func TestAddCurrency(t *testing.T) {
 			mockBehavior:   func() {},
 		},
 		{
-			name: "Invalid code length",
+			name: "Invalid code length - Above Maximum Allowed",
 			payload: map[string]interface{}{
-				"code":        "USDD",
+				"code":        "USDDDD",
 				"rate_to_usd": 1.0,
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   `{"error":"invalid currency code, must be 3 characters long following ISO 4217"}`,
+			expectedBody:   fmt.Sprintf(`{"error":"invalid currency code, must be up to %d characters"}`, commons.AllowedCurrencyLength),
+			mockBehavior:   func() {},
+		},
+		{
+			name: "Invalid code length - Below Minimum Allowed",
+			payload: map[string]interface{}{
+				"code":        "US",
+				"rate_to_usd": 1.0,
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   fmt.Sprintf(`{"error":"invalid currency code, must be at least %d characters"}`, commons.MinimumCurrencyLength),
 			mockBehavior:   func() {},
 		},
 	}
@@ -202,7 +213,7 @@ func TestAddCurrency(t *testing.T) {
 
 			userID := uuid.New()
 			user := model.User{ID: userID, Username: "testuser", Role: model.RoleAdmin}
-			ctx := context.WithValue(req.Context(), api_middleware.UserContextKey, user)
+			ctx := context.WithValue(req.Context(), commons.UserContextKey, user)
 			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
@@ -249,8 +260,8 @@ func TestRemoveCurrency(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
-	t.Run("Invalid Code - Length", func(t *testing.T) {
-		req, err := http.NewRequest("DELETE", "/currency/RR", nil)
+	t.Run("Invalid Code - Length Under Minimum", func(t *testing.T) {
+		req, err := http.NewRequest("DELETE", "/currency/R", nil)
 		assert.NoError(t, err)
 
 		rr := httptest.NewRecorder()
@@ -260,7 +271,21 @@ func TestRemoveCurrency(t *testing.T) {
 		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
-		assert.JSONEq(t, `{"error":"invalid currency code, must be 3 characters long following ISO 4217"}`, rr.Body.String())
+		assert.JSONEq(t, fmt.Sprintf(`{"error":"invalid currency code, must be at least %d characters"}`, commons.MinimumCurrencyLength), rr.Body.String())
+
+	})
+	t.Run("Invalid Code - Length", func(t *testing.T) {
+		req, err := http.NewRequest("DELETE", "/currency/RRRRRR", nil)
+		assert.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+
+		router := chi.NewRouter()
+		router.Delete("/currency/{code}", h.RemoveCurrency)
+		router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.JSONEq(t, fmt.Sprintf(`{"error":"invalid currency code, must be up to %d characters"}`, commons.AllowedCurrencyLength), rr.Body.String())
 
 	})
 }
@@ -353,7 +378,7 @@ func TestUpdateCurrency(t *testing.T) {
 
 			userID := uuid.New()
 			user := model.User{ID: userID, Username: "testuser", Role: model.RoleAdmin}
-			ctx := context.WithValue(req.Context(), api_middleware.UserContextKey, user)
+			ctx := context.WithValue(req.Context(), commons.UserContextKey, user)
 			req = req.WithContext(ctx)
 
 			rctx := chi.NewRouteContext()
