@@ -6,13 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/logger"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/Lutefd/challenge-bravo/internal/repository"
 	"golang.org/x/time/rate"
 )
-
-const UserContextKey = "user"
 
 type AuthMiddleware struct {
 	userRepo repository.UserRepository
@@ -23,10 +22,22 @@ func NewAuthMiddleware(userRepo repository.UserRepository) *AuthMiddleware {
 }
 
 var (
-	Limiter = rate.NewLimiter(rate.Every(time.Second), 10)
-	clients = make(map[string]*rate.Limiter)
+	Clients = make(map[string]*rate.Limiter)
 	mu      sync.Mutex
 )
+
+func getRateLimiter(ip string) *rate.Limiter {
+	mu.Lock()
+	defer mu.Unlock()
+
+	limiter, exists := Clients[ip]
+	if !exists {
+		limiter = rate.NewLimiter(rate.Every(time.Second), commons.AllowedRPS)
+		Clients[ip] = limiter
+	}
+
+	return limiter
+}
 
 func (am *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +56,7 @@ func (am *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		}
 
 		user := userDB.ToUser()
-		ctx := context.WithValue(r.Context(), UserContextKey, user)
+		ctx := context.WithValue(r.Context(), commons.UserContextKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -54,7 +65,7 @@ func RequireRole(role model.Role) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			contextUser := r.Context().Value(UserContextKey)
+			contextUser := r.Context().Value(commons.UserContextKey)
 
 			user, ok := contextUser.(model.User)
 			if !ok {
@@ -71,9 +82,13 @@ func RequireRole(role model.Role) func(http.Handler) http.Handler {
 		})
 	}
 }
+
 func RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !Limiter.Allow() {
+		ip := r.RemoteAddr
+
+		limiter := getRateLimiter(ip)
+		if !limiter.Allow() {
 			logger.Errorf("rate limit exceeded for IP: %s", r.RemoteAddr)
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return

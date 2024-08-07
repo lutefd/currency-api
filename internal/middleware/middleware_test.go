@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	api_middleware "github.com/Lutefd/challenge-bravo/internal/middleware"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/google/uuid"
@@ -81,7 +82,7 @@ func TestAuthMiddleware_Authenticate(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			checkUser: func(t *testing.T, r *http.Request) {
-				user, ok := r.Context().Value(api_middleware.UserContextKey).(model.User)
+				user, ok := r.Context().Value(commons.UserContextKey).(model.User)
 				assert.True(t, ok)
 				assert.Equal(t, "testuser", user.Username)
 			},
@@ -158,7 +159,7 @@ func TestRequireRole(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			if tt.user != (model.User{}) {
-				ctx := context.WithValue(req.Context(), api_middleware.UserContextKey, tt.user)
+				ctx := context.WithValue(req.Context(), commons.UserContextKey, tt.user)
 				req = req.WithContext(ctx)
 			}
 
@@ -175,23 +176,34 @@ func TestRequireRole(t *testing.T) {
 }
 
 func TestRateLimitMiddleware(t *testing.T) {
+	originalClients := api_middleware.Clients
+	api_middleware.Clients = make(map[string]*rate.Limiter)
+	defer func() {
+		api_middleware.Clients = originalClients
+	}()
+
 	tests := []struct {
 		name           string
+		ip             string
 		setupLimiter   func()
 		expectedStatus int
 	}{
 		{
 			name: "Under rate limit",
+			ip:   "192.168.0.1",
 			setupLimiter: func() {
-				api_middleware.Limiter.SetLimit(rate.Inf)
+				limiter := rate.NewLimiter(rate.Inf, commons.AllowedRPS)
+				api_middleware.Clients["192.168.0.1"] = limiter
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name: "Exceeds rate limit",
+			ip:   "192.168.0.1",
 			setupLimiter: func() {
-				api_middleware.Limiter = rate.NewLimiter(rate.Every(time.Second), 1)
-				_ = api_middleware.Limiter.Allow()
+				limiter := rate.NewLimiter(rate.Every(time.Second), 1)
+				api_middleware.Clients["192.168.0.1"] = limiter
+				_ = api_middleware.Clients["192.168.0.1"].Allow()
 			},
 			expectedStatus: http.StatusTooManyRequests,
 		},
@@ -202,6 +214,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 			tt.setupLimiter()
 
 			req := httptest.NewRequest("GET", "/", nil)
+			req.RemoteAddr = tt.ip
 			rr := httptest.NewRecorder()
 
 			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
