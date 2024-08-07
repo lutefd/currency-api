@@ -16,7 +16,7 @@ import (
 type Server struct {
 	config        Config
 	httpServer    *http.Server
-	router        http.Handler
+	Router        http.Handler
 	rateUpdater   *worker.RateUpdater
 	currencyRepo  repository.CurrencyRepository
 	currencyCache cache.Cache
@@ -26,15 +26,15 @@ type Server struct {
 }
 
 func NewServer(config Config) (*Server, error) {
-	repo, err := repository.NewPostgresCurrencyRepository(config.PostgresConn)
+	repo, err := repository.NewPostgresCurrencyRepository(config.PostgresConn, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize repository: %w", err)
 	}
-	userRepo, err := repository.NewPostgresUserRepository(config.PostgresConn)
+	userRepo, err := repository.NewPostgresUserRepository(config.PostgresConn, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user repository: %w", err)
 	}
-	logRepo, err := repository.NewPostgresLogRepository(config.PostgresConn)
+	logRepo, err := repository.NewPostgresLogRepository(config.PostgresConn, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize log repository: %w", err)
 	}
@@ -65,7 +65,7 @@ func NewServer(config Config) (*Server, error) {
 
 	server.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", config.ServerPort),
-		Handler:      server.router,
+		Handler:      server.Router,
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,

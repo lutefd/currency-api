@@ -31,5 +31,5 @@ func (s *Server) registerRoutes(currencyService *service.CurrencyService, userSe
 			r.Delete("/{code}", currencyHandler.RemoveCurrency)
 		})
 	})
-	s.router = router
+	s.Router = router
 }
