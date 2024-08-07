@@ -11,14 +11,16 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Mock implementations
 type MockCurrencyRepository struct {
 	mock.Mock
 }
 
 func (m *MockCurrencyRepository) GetByCode(ctx context.Context, code string) (*model.Currency, error) {
 	args := m.Called(ctx, code)
-	return args.Get(0).(*model.Currency), args.Error(1)
+	if args.Get(0) != nil {
+		return args.Get(0).(*model.Currency), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *MockCurrencyRepository) Create(ctx context.Context, currency *model.Currency) error {
@@ -71,7 +73,18 @@ type MockExternalAPIClient struct {
 
 func (m *MockExternalAPIClient) FetchRates(ctx context.Context) (*model.ExchangeRates, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*model.ExchangeRates), args.Error(1)
+	if args.Get(0) != nil {
+		return args.Get(0).(*model.ExchangeRates), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func newTestRateUpdater() (*RateUpdater, *MockCurrencyRepository, *MockCache, *MockExternalAPIClient) {
+	repo := &MockCurrencyRepository{}
+	cache := &MockCache{}
+	externalAPI := &MockExternalAPIClient{}
+	updater := NewRateUpdater(repo, cache, externalAPI, 10*time.Millisecond)
+	return updater, repo, cache, externalAPI
 }
 
 func TestNewRateUpdater(t *testing.T) {
@@ -82,17 +95,14 @@ func TestNewRateUpdater(t *testing.T) {
 
 	updater := NewRateUpdater(repo, cache, externalAPI, interval)
 
-	assert.Equal(t, repo, updater.repo)
-	assert.Equal(t, cache, updater.cache)
-	assert.Equal(t, externalAPI, updater.externalAPI)
-	assert.Equal(t, interval, updater.interval)
+	assert.Equal(t, repo, updater.repo, "expected repo to be correctly assigned")
+	assert.Equal(t, cache, updater.cache, "expected cache to be correctly assigned")
+	assert.Equal(t, externalAPI, updater.externalAPI, "expected externalAPI to be correctly assigned")
+	assert.Equal(t, interval, updater.interval, "expected interval to be correctly assigned")
 }
 
 func TestRateUpdater_updateRates(t *testing.T) {
-	repo := &MockCurrencyRepository{}
-	cache := &MockCache{}
-	externalAPI := &MockExternalAPIClient{}
-	updater := NewRateUpdater(repo, cache, externalAPI, time.Hour)
+	updater, repo, cache, externalAPI := newTestRateUpdater()
 
 	ctx := context.Background()
 	mockRates := &model.ExchangeRates{
@@ -109,17 +119,14 @@ func TestRateUpdater_updateRates(t *testing.T) {
 
 	err := updater.updateRates(ctx)
 
-	assert.NoError(t, err)
+	assert.NoError(t, err, "expected no error during updateRates")
 	externalAPI.AssertExpectations(t)
 	repo.AssertExpectations(t)
 	cache.AssertExpectations(t)
 }
 
 func TestRateUpdater_updateRates_Error(t *testing.T) {
-	repo := &MockCurrencyRepository{}
-	cache := &MockCache{}
-	externalAPI := &MockExternalAPIClient{}
-	updater := NewRateUpdater(repo, cache, externalAPI, time.Hour)
+	updater, _, _, externalAPI := newTestRateUpdater()
 
 	ctx := context.Background()
 
@@ -127,16 +134,13 @@ func TestRateUpdater_updateRates_Error(t *testing.T) {
 
 	err := updater.updateRates(ctx)
 
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to fetch rates")
+	assert.Error(t, err, "expected an error due to failed API fetch")
+	assert.Contains(t, err.Error(), "failed to fetch rates", "expected error to contain specific message")
 	externalAPI.AssertExpectations(t)
 }
 
 func TestRateUpdater_populateRates(t *testing.T) {
-	repo := &MockCurrencyRepository{}
-	cache := &MockCache{}
-	externalAPI := &MockExternalAPIClient{}
-	updater := NewRateUpdater(repo, cache, externalAPI, time.Hour)
+	updater, repo, cache, externalAPI := newTestRateUpdater()
 
 	ctx := context.Background()
 	mockRates := &model.ExchangeRates{
@@ -154,19 +158,17 @@ func TestRateUpdater_populateRates(t *testing.T) {
 
 	err := updater.populateRates(ctx)
 
-	assert.NoError(t, err)
+	assert.NoError(t, err, "expected no error during populateRates")
 	externalAPI.AssertExpectations(t)
 	repo.AssertExpectations(t)
 	cache.AssertExpectations(t)
 }
 
 func TestRateUpdater_Start(t *testing.T) {
-	repo := &MockCurrencyRepository{}
-	cache := &MockCache{}
-	externalAPI := &MockExternalAPIClient{}
-	updater := NewRateUpdater(repo, cache, externalAPI, 100*time.Millisecond)
+	updater, repo, cache, externalAPI := newTestRateUpdater()
+	updater.interval = 10 * time.Millisecond
 
-	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	mockRates := &model.ExchangeRates{
@@ -183,12 +185,19 @@ func TestRateUpdater_Start(t *testing.T) {
 	repo.On("Update", mock.Anything, mock.AnythingOfType("*model.Currency")).Return(nil)
 	cache.On("Set", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("float64"), 1*time.Hour).Return(nil)
 
-	go updater.Start(ctx)
+	doneChan := make(chan struct{})
 
-	<-ctx.Done()
+	go func() {
+		updater.Start(ctx)
+		close(doneChan)
+	}()
 
-	// The updater should have run at least twice (initial populate + at least one update)
-	externalAPI.AssertNumberOfCalls(t, "FetchRates", 3)
+	time.Sleep(35 * time.Millisecond)
+	cancel()
+
+	<-doneChan
+
+	externalAPI.AssertNumberOfCalls(t, "FetchRates", 4)
 	repo.AssertExpectations(t)
 	cache.AssertExpectations(t)
 }

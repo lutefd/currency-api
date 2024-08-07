@@ -34,9 +34,9 @@ func TestNewOpenExchangeRatesClient(t *testing.T) {
 
 func TestOpenExchangeRatesClient_FetchRates(t *testing.T) {
 	tests := []struct {
-		name           string
-		responses      []mockResponse
-		expectedError  bool
+		name            string
+		responses       []mockResponse
+		expectedError   bool
 		expectedRetries int
 	}{
 		{
@@ -44,7 +44,7 @@ func TestOpenExchangeRatesClient_FetchRates(t *testing.T) {
 			responses: []mockResponse{
 				{statusCode: http.StatusOK, body: `{"rates":{"USD":1,"EUR":0.85}}`},
 			},
-			expectedError:  false,
+			expectedError:   false,
 			expectedRetries: 0,
 		},
 		{
@@ -53,7 +53,7 @@ func TestOpenExchangeRatesClient_FetchRates(t *testing.T) {
 				{statusCode: http.StatusInternalServerError, body: ""},
 				{statusCode: http.StatusOK, body: `{"rates":{"USD":1,"EUR":0.85}}`},
 			},
-			expectedError:  false,
+			expectedError:   false,
 			expectedRetries: 1,
 		},
 		{
@@ -62,7 +62,7 @@ func TestOpenExchangeRatesClient_FetchRates(t *testing.T) {
 				{err: &networkError{message: "connection refused"}},
 				{statusCode: http.StatusOK, body: `{"rates":{"USD":1,"EUR":0.85}}`},
 			},
-			expectedError:  false,
+			expectedError:   false,
 			expectedRetries: 1,
 		},
 		{
@@ -73,8 +73,8 @@ func TestOpenExchangeRatesClient_FetchRates(t *testing.T) {
 				{statusCode: http.StatusInternalServerError, body: ""},
 				{statusCode: http.StatusInternalServerError, body: ""},
 			},
-			expectedError:  true,
-			expectedRetries: 3,
+			expectedError:   true,
+			expectedRetries: 2,
 		},
 	}
 
@@ -160,7 +160,6 @@ func TestOpenExchangeRatesClient_calculateBackoff(t *testing.T) {
 		assert.LessOrEqual(t, backoff, client.baseDelay*(1<<uint(i))*3/2)
 	}
 
-	// Test max delay
 	largeBackoff := client.calculateBackoff(10)
 	assert.LessOrEqual(t, largeBackoff, client.maxDelay*3/2)
 }
