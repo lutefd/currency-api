@@ -13,15 +13,18 @@ type PostgresLogRepository struct {
 	db *sql.DB
 }
 
-func NewPostgresLogRepository(connURL string) (*PostgresLogRepository, error) {
-	db, err := sql.Open("postgres", connURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
+func NewPostgresLogRepository(connURL string, db *sql.DB) (*PostgresLogRepository, error) {
+	if db == nil {
+		var err error
+		db, err = sql.Open("postgres", connURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to database: %w", err)
+		}
 
-	err = db.Ping()
-	if err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		err = db.Ping()
+		if err != nil {
+			return nil, fmt.Errorf("failed to ping database: %w", err)
+		}
 	}
 
 	return &PostgresLogRepository{db: db}, nil

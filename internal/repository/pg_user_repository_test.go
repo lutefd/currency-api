@@ -13,6 +13,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewPostgresUserRepository(t *testing.T) {
+	t.Run("With real connection", func(t *testing.T) {
+		t.Skip("Skipping integration test")
+
+		repo, err := NewPostgresUserRepository("your_real_connection_string", nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, repo)
+		repo.Close()
+	})
+
+	t.Run("With mock database", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+
+		mock.ExpectPing()
+
+		repo, err := NewPostgresUserRepository("", db)
+		assert.NoError(t, err)
+		assert.NotNil(t, repo)
+
+		err = mock.ExpectationsWereMet()
+		assert.NoError(t, err)
+	})
+}
+
 func TestPostgresUserRepository_Create(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

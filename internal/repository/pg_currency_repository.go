@@ -13,15 +13,19 @@ type PostgresCurrencyRepository struct {
 	db *sql.DB
 }
 
-func NewPostgresCurrencyRepository(connURL string) (*PostgresCurrencyRepository, error) {
-	db, err := sql.Open("postgres", connURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
+func NewPostgresCurrencyRepository(connURL string, db *sql.DB) (*PostgresCurrencyRepository, error) {
+	if db == nil {
+		fmt.Println("shouldn't be here")
+		var err error
+		db, err = sql.Open("postgres", connURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to database: %w", err)
+		}
 
-	err = db.Ping()
-	if err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		err = db.Ping()
+		if err != nil {
+			return nil, fmt.Errorf("failed to ping database: %w", err)
+		}
 	}
 
 	return &PostgresCurrencyRepository{db: db}, nil
