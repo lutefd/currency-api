@@ -13,16 +13,18 @@ import (
 )
 
 var (
-	InfoLogger  *log.Logger
-	ErrorLogger *log.Logger
-	logChan     chan model.Log
-	logRepo     repository.LogRepository
+	InfoLogger          *log.Logger
+	ErrorLogger         *log.Logger
+	logChan             chan model.Log
+	logRepo             repository.LogRepository
+	loggerBufferSize    = 1000
+	LoggerSleepDuration = 100 * time.Millisecond
 )
 
 func init() {
 	InfoLogger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	ErrorLogger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-	logChan = make(chan model.Log, 1000)
+	logChan = make(chan model.Log, loggerBufferSize)
 }
 
 func InitLogger(repo repository.LogRepository) {
@@ -87,7 +89,7 @@ func Shutdown(ctx context.Context) error {
 			if len(logChan) == 0 {
 				return logRepo.Close()
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(LoggerSleepDuration)
 		}
 	}
 }

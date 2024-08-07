@@ -36,7 +36,7 @@ func TestLogger_Info(t *testing.T) {
 
 	logger.Info("Test info message")
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(logger.LoggerSleepDuration)
 
 	mockRepo.AssertCalled(t, "SaveLog", mock.Anything, mock.MatchedBy(func(log model.Log) bool {
 		return log.Level == model.LogLevelInfo && log.Message == "Test info message"
@@ -51,7 +51,7 @@ func TestLogger_Error(t *testing.T) {
 
 	logger.Error("Test error message")
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(logger.LoggerSleepDuration)
 	mockRepo.AssertCalled(t, "SaveLog", mock.Anything, mock.MatchedBy(func(log model.Log) bool {
 		return log.Level == model.LogLevelError && log.Message == "Test error message"
 	}))

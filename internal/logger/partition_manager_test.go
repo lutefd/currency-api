@@ -67,7 +67,7 @@ func TestPartitionManager_Start(t *testing.T) {
 	err := pm.Start(ctx)
 	assert.NoError(t, err)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(LoggerSleepDuration)
 
 	mockRepo.AssertExpectations(t)
 
@@ -140,7 +140,7 @@ func TestPartitionManager_cronJob(t *testing.T) {
 	assert.Len(t, entries, 1)
 	entries[0].Job.Run()
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(LoggerSleepDuration)
 
 	mockRepo.AssertExpectations(t)
 }
