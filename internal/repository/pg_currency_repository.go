@@ -58,12 +58,22 @@ func (r *PostgresCurrencyRepository) Create(ctx context.Context, currency *model
 
 func (r *PostgresCurrencyRepository) Update(ctx context.Context, currency *model.Currency) error {
 	query := `UPDATE currencies SET rate = $2, updated_at = $3, updated_by = $4 WHERE code = $1`
-	_, err := r.db.ExecContext(ctx, query,
+	result, err := r.db.ExecContext(ctx, query,
 		currency.Code, currency.Rate, currency.UpdatedAt, currency.UpdatedBy,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update currency: %w", err)
 	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return model.ErrCurrencyNotFound
+	}
+
 	return nil
 }
 
