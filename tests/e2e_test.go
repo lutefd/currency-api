@@ -30,22 +30,18 @@ var testServer *server.Server
 var adminAPIKey string
 
 func TestMain(m *testing.M) {
-	// Load the .env file
 	err := godotenv.Load("../.env")
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	// Setup
 	err = setup()
 	if err != nil {
 		log.Fatalf("Error setting up test environment: %v", err)
 	}
 
-	// Run tests
 	code := m.Run()
 
-	// Teardown
 	err = teardown()
 	if err != nil {
 		log.Printf("Error tearing down test environment: %v", err)
@@ -57,34 +53,28 @@ func TestMain(m *testing.M) {
 func setup() error {
 	var err error
 
-	// Create test database
 	err = createTestDatabase()
 	if err != nil {
 		return fmt.Errorf("error creating test database: %w", err)
 	}
 
-	// Run migrations
 	err = runMigrations()
 	if err != nil {
 		return fmt.Errorf("error running migrations: %w", err)
 	}
 
-	// Seed the database
 	err = seedDatabase()
 	if err != nil {
 		return fmt.Errorf("error seeding database: %w", err)
 	}
 
-	// Set up the test environment
 	config, err := server.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// Use the test database connection string
 	config.PostgresConn = os.Getenv("TEST_POSTGRES_CONN")
 
-	// Create a new server instance
 	testServer, err = server.NewServer(config)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %w", err)
@@ -94,7 +84,12 @@ func setup() error {
 }
 
 func createTestDatabase() error {
-	connURL, err := url.Parse(os.Getenv("POSTGRES_CONN"))
+	pg_host := os.Getenv("POSTGRES_HOST")
+	pg_port := os.Getenv("POSTGRES_PORT")
+	pg_user := os.Getenv("POSTGRES_USER")
+	pg_pass := os.Getenv("POSTGRES_PASSWORD")
+	pg_db := os.Getenv("POSTGRES_NAME")
+	connURL, err := url.Parse(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", pg_user, pg_pass, pg_host, pg_port, pg_db))
 	if err != nil {
 		return fmt.Errorf("error parsing database URL: %w", err)
 	}
