@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/logger"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 )
@@ -47,9 +48,9 @@ func NewOpenExchangeRatesClient(apiKey string, options ...OpenExchangeRatesClien
 		apiKey:     apiKey,
 		client:     &http.Client{},
 		baseURL:    "https://openexchangerates.org/api",
-		maxRetries: 3,
-		baseDelay:  time.Second,
-		maxDelay:   30 * time.Second,
+		maxRetries: commons.ExternalClientMaxRetries,
+		baseDelay:  commons.ExternalClientBaseDelay,
+		maxDelay:   commons.ExternalClientMaxDelay,
 	}
 
 	for _, option := range options {

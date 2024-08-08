@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/cache"
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/Lutefd/challenge-bravo/internal/repository"
 )
@@ -104,7 +105,7 @@ func (ru *RateUpdater) populateRates(ctx context.Context) error {
 				continue
 			}
 		}
-		if err := ru.cache.Set(ctx, code, rate, 1*time.Hour); err != nil {
+		if err := ru.cache.Set(ctx, code, rate, commons.RateUpdaterCacheExipiration); err != nil {
 			log.Printf("failed to update currency %s in cache: %v", code, err)
 		}
 	}

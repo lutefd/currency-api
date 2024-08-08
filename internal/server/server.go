@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/cache"
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/logger"
 	"github.com/Lutefd/challenge-bravo/internal/repository"
 	"github.com/Lutefd/challenge-bravo/internal/service"
@@ -66,9 +67,9 @@ func NewServer(config Config) (*Server, error) {
 	server.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", config.ServerPort),
 		Handler:      server.Router,
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  commons.ServerIdleTimeout,
+		ReadTimeout:  commons.ServerReadTimeout,
+		WriteTimeout: commons.ServerWriteTimeout,
 	}
 
 	return server, nil

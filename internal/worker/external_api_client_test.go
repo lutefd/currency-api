@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,9 +17,9 @@ func TestNewOpenExchangeRatesClient(t *testing.T) {
 	client := NewOpenExchangeRatesClient(apiKey)
 
 	assert.Equal(t, apiKey, client.apiKey)
-	assert.Equal(t, 3, client.maxRetries)
-	assert.Equal(t, time.Second, client.baseDelay)
-	assert.Equal(t, 30*time.Second, client.maxDelay)
+	assert.Equal(t, commons.ExternalClientMaxRetries, client.maxRetries)
+	assert.Equal(t, commons.ExternalClientBaseDelay, client.baseDelay)
+	assert.Equal(t, commons.ExternalClientMaxDelay, client.maxDelay)
 
 	customClient := NewOpenExchangeRatesClient(
 		apiKey,
