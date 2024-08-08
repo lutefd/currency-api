@@ -15,7 +15,6 @@ type PostgresCurrencyRepository struct {
 
 func NewPostgresCurrencyRepository(connURL string, db *sql.DB) (*PostgresCurrencyRepository, error) {
 	if db == nil {
-		fmt.Println("shouldn't be here")
 		var err error
 		db, err = sql.Open("postgres", connURL)
 		if err != nil {
