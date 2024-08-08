@@ -1,0 +1,44 @@
+classDiagram
+    class Currency {
+        +string Code
+        +float64 Rate
+        +time.Time UpdatedAt
+        +uuid.UUID CreatedBy
+        +uuid.UUID UpdatedBy
+        +time.Time CreatedAt
+    }
+
+    class ExchangeRates {
+        +int64 Timestamp
+        +string Base
+        +map[string]float64 Rates
+    }
+
+    class UserDB {
+        +uuid.UUID ID
+        +string Username
+        +string Password
+        +Role Role
+        +string APIKey
+        +time.Time CreatedAt
+        +time.Time UpdatedAt
+    }
+
+    class User {
+        +uuid.UUID ID
+        +string Username
+        +Role Role
+        +string APIKey
+    }
+
+    class Log {
+        +uuid.UUID ID
+        +LogLevel Level
+        +string Message
+        +time.Time Timestamp
+        +string Source
+    }
+
+    UserDB --|> User : ToUser()
+    User -- Currency : CreatedBy/UpdatedBy
+    Currency -- ExchangeRates : Rates
