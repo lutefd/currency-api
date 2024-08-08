@@ -94,6 +94,28 @@ func TestConvertCurrency(t *testing.T) {
 			expectedBody:   `{"error":"invalid amount"}`,
 			mockBehavior:   func() {},
 		},
+		{
+			name:           "From currency not found",
+			from:           "XYZ",
+			to:             "EUR",
+			amount:         "100.00",
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   `{"error":"currency not found: XYZ"}`,
+			mockBehavior: func() {
+				mockService.On("Convert", mock.Anything, "XYZ", "EUR", 100.0).Return(0.0, fmt.Errorf("%w: XYZ", model.ErrCurrencyNotFound)).Once()
+			},
+		},
+		{
+			name:           "To currency not found",
+			from:           "USD",
+			to:             "XYZ",
+			amount:         "100.00",
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   `{"error":"currency not found: XYZ"}`,
+			mockBehavior: func() {
+				mockService.On("Convert", mock.Anything, "USD", "XYZ", 100.0).Return(0.0, fmt.Errorf("%w: XYZ", model.ErrCurrencyNotFound)).Once()
+			},
+		},
 	}
 
 	for _, tt := range tests {

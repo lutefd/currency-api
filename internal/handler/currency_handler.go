@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -55,7 +56,11 @@ func (h *CurrencyHandler) ConvertCurrency(w http.ResponseWriter, r *http.Request
 
 	result, err := h.currencyService.Convert(r.Context(), from, to, amount)
 	if err != nil {
-		commons.RespondWithError(w, http.StatusInternalServerError, "conversion failed")
+		if errors.Is(err, model.ErrCurrencyNotFound) {
+			commons.RespondWithError(w, http.StatusNotFound, err.Error())
+		} else {
+			commons.RespondWithError(w, http.StatusInternalServerError, "conversion failed")
+		}
 		return
 	}
 
