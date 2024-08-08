@@ -107,29 +107,32 @@ func TestCurrencyService_Convert(t *testing.T) {
 		to            string
 		amount        float64
 		expected      float64
-		expectedError bool
+		expectedError error
 	}{
-		{"USD to EUR", "USD", "EUR", 100, 85, false},
-		{"EUR to USD", "EUR", "USD", 85, 100, false},
-		{"USD to GBP", "USD", "GBP", 100, 75, false},
-		{"Invalid currency", "USD", "XYZ", 100, 0, true},
+		{"USD to EUR", "USD", "EUR", 100, 85, nil},
+		{"EUR to USD", "EUR", "USD", 85, 100, nil},
+		{"USD to GBP", "USD", "GBP", 100, 75, nil},
+		{"From currency not found", "XYZ", "USD", 100, 0, model.ErrCurrencyNotFound},
+		{"To currency not found", "USD", "XYZ", 100, 0, model.ErrCurrencyNotFound},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := currencyService.Convert(context.Background(), tt.from, tt.to, tt.amount)
 
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("Expected an error, but got none")
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				assert.True(t, errors.Is(err, tt.expectedError), "Expected error %v, but got %v", tt.expectedError, err)
+				if tt.expectedError == model.ErrCurrencyNotFound {
+					if tt.from == "XYZ" {
+						assert.Contains(t, err.Error(), tt.from, "Error should contain the 'from' currency code")
+					} else {
+						assert.Contains(t, err.Error(), tt.to, "Error should contain the 'to' currency code")
+					}
 				}
 			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-				if result != tt.expected {
-					t.Errorf("Expected %f, but got %f", tt.expected, result)
-				}
+				assert.NoError(t, err)
+				assert.InDelta(t, tt.expected, result, 0.001, "Expected %f, but got %f", tt.expected, result)
 			}
 		})
 	}

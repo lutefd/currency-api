@@ -60,7 +60,7 @@ func (s *CurrencyService) getRate(ctx context.Context, code string) (float64, er
 
 	rate, ok := rates.Rates[code]
 	if !ok {
-		return 0, fmt.Errorf("currency %s not found", code)
+		return 0, fmt.Errorf("%w: %s", model.ErrCurrencyNotFound, code)
 	}
 	currency = &model.Currency{
 		Code:      strings.ToUpper(code),
