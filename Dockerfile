@@ -1,17 +1,21 @@
-# Dockerfile
-FROM golang:1.22-alpine
+FROM golang:1.22 AS builder
 
 WORKDIR /app
 
-COPY go.mod .
-COPY go.sum .
+COPY go.mod go.sum ./
 
 RUN go mod download
-
 COPY . .
 
-RUN go build -o main cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/api/main.go
 
-EXPOSE 8080
+
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+COPY --from=builder /app/main .
 
 CMD ["./main"]

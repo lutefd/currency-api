@@ -4,9 +4,12 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - redis
-      - db
-      - migrate
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       POSTGRES_HOST: db
@@ -36,6 +39,11 @@ services:
       POSTGRES_DB: ${POSTGRES_NAME}
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - mynetwork
 
@@ -50,7 +58,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_NAME: ${POSTGRES_NAME}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - mynetwork
 
