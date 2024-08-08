@@ -1,0 +1,50 @@
+graph TB
+    subgraph "System Context"
+        U["User"]
+        A["Admin"]
+        E["External Exchange Rate API"]
+        CES["Currency Exchange System"]
+    end
+
+    U -->|"Uses"| CES
+    A -->|"Manages"| CES
+    E -->|"Provides rates"| CES
+
+    subgraph "Container"
+        API["API Application"]
+        DB["PostgreSQL Database"]
+        Cache["Redis Cache"]
+        Worker["Rate Updater Worker"]
+    end
+
+    CES -->|"Contains"| API
+    CES -->|"Contains"| DB
+    CES -->|"Contains"| Cache
+    CES -->|"Contains"| Worker
+
+    API -->|"Reads/Writes"| DB
+    API -->|"Reads/Writes"| Cache
+    Worker -->|"Updates"| DB
+    Worker -->|"Updates"| Cache
+    Worker -->|"Fetches rates"| E
+
+    subgraph "Component"
+        H["Handlers"]
+        S["Services"]
+        R["Repositories"]
+        M["Middleware"]
+        L["Logger"]
+    end
+
+    API -->|"Contains"| H
+    API -->|"Contains"| S
+    API -->|"Contains"| R
+    API -->|"Contains"| M
+    API -->|"Contains"| L
+
+    H -->|"Uses"| S
+    S -->|"Uses"| R
+    H -->|"Uses"| M
+    S -->|"Uses"| L
+    R -->|"Interacts with"| DB
+    R -->|"Interacts with"| Cache
