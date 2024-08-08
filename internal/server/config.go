@@ -33,10 +33,31 @@ func LoadConfig() (Config, error) {
 		errors = append(errors, "REDIS_ADDR is not set")
 	}
 
-	config.PostgresConn = os.Getenv("POSTGRES_CONN")
-	if config.PostgresConn == "" {
-		errors = append(errors, "POSTGRES_CONN is not set")
+	pg_user := os.Getenv("POSTGRES_USER")
+	if pg_user == "" {
+		errors = append(errors, "POSTGRES_USER is not set")
 	}
+
+	pg_pass := os.Getenv("POSTGRES_PASSWORD")
+	if pg_pass == "" {
+		errors = append(errors, "POSTGRES_PASSWORD is not set")
+	}
+
+	pg_host := os.Getenv("POSTGRES_HOST")
+	if pg_host == "" {
+		errors = append(errors, "POSTGRES_HOST is not set")
+	}
+	pg_port := os.Getenv("POSTGRES_PORT")
+	if pg_port == "" {
+		errors = append(errors, "POSTGRES_PORT is not set")
+	}
+
+	pg_db := os.Getenv("POSTGRES_NAME")
+	if pg_db == "" {
+		errors = append(errors, "POSTGRES_NAME is not set")
+	}
+
+	config.PostgresConn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", pg_user, pg_pass, pg_host, pg_port, pg_db)
 
 	config.APIKey = os.Getenv("API_KEY")
 	if config.APIKey == "" {

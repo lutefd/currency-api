@@ -26,7 +26,11 @@ func TestLoadConfig(t *testing.T) {
 	t.Run("Valid configuration", func(t *testing.T) {
 		setEnv("REDIS_PASSWORD", "password")
 		setEnv("REDIS_ADDR", "localhost:6379")
-		setEnv("POSTGRES_CONN", "postgres://user:pass@localhost:5432/db")
+		setEnv("POSTGRES_USER", "user")
+		setEnv("POSTGRES_PASSWORD", "pass")
+		setEnv("POSTGRES_HOST", "localhost")
+		setEnv("POSTGRES_PORT", "5432")
+		setEnv("POSTGRES_NAME", "db")
 		setEnv("API_KEY", "my-api-key")
 		setEnv("SERVER_PORT", "8080")
 
@@ -35,7 +39,7 @@ func TestLoadConfig(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "password", config.RedisPass)
 		assert.Equal(t, "localhost:6379", config.RedisAddr)
-		assert.Equal(t, "postgres://user:pass@localhost:5432/db", config.PostgresConn)
+		assert.Equal(t, "postgres://user:pass@localhost:5432/db?sslmode=disable", config.PostgresConn)
 		assert.Equal(t, "my-api-key", config.APIKey)
 		assert.Equal(t, uint16(8080), config.ServerPort)
 	})
@@ -52,7 +56,11 @@ func TestLoadConfig(t *testing.T) {
 	t.Run("Invalid SERVER_PORT", func(t *testing.T) {
 		setEnv("REDIS_PASSWORD", "password")
 		setEnv("REDIS_ADDR", "localhost:6379")
-		setEnv("POSTGRES_CONN", "postgres://user:pass@localhost:5432/db")
+		setEnv("POSTGRES_USER", "user")
+		setEnv("POSTGRES_PASSWORD", "pass")
+		setEnv("POSTGRES_HOST", "localhost")
+		setEnv("POSTGRES_PORT", "5432")
+		setEnv("POSTGRES_NAME", "db")
 		setEnv("API_KEY", "my-api-key")
 		setEnv("SERVER_PORT", "invalid-port")
 
@@ -71,6 +79,5 @@ func TestLoadConfig(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "configuration errors occurred")
-
 	})
 }
