@@ -1,81 +1,700 @@
-# <img src="https://avatars1.githubusercontent.com/u/7063040?v=4&s=200.jpg" alt="Hurb" width="24" /> Bravo Challenge
+# Challenge Bravo
 
-[[English](README.md) | [Portuguese](README.pt.md)]
+![Current Code Coverage](https://img.shields.io/badge/coverage-69.3%25-yellow)
 
-Build an API, which responds to JSON, for currency conversion. It must have a backing currency (USD) and make conversions between different currencies with **real and live values**.
+## Table of Contents
 
-The API must convert between the following currencies:
+-   [Challenge Bravo](#challenge-bravo)
+    -   [Table of Contents](#table-of-contents)
+    -   [Project Description](#project-description)
+    -   [Technology Stack](#technology-stack)
+    -   [Services](#services)
+    -   [Features](#features)
+    -   [Setup and Configuration](#setup-and-configuration)
+        -   [Environment Variables](#environment-variables)
+        -   [Constants Configuration](#constants-configuration)
+        -   [Docker Setup](#docker-setup)
+        -   [Local Development](#local-development)
+        -   [Testing](#testing)
+        -   [Manual Testing](#manual-testing)
+    -   [API Documentation](#api-documentation)
+        -   [Base URL](#base-url)
+        -   [Swagger Documentation](#swagger-documentation)
+        -   [Authentication](#authentication)
+        -   [Endpoints](#endpoints)
+            -   [Currency Conversion](#currency-conversion)
+                -   [GET /currency/convert](#get-currencyconvert)
+            -   [Currency Management (Admin only)](#currency-management-admin-only)
+                -   [POST /currency](#post-currency)
+                -   [PUT /currency/{code}](#put-currencycode)
+                -   [DELETE /currency/{code}](#delete-currencycode)
+            -   [User Management](#user-management)
+                -   [POST /auth/register](#post-authregister)
+                -   [POST /auth/login](#post-authlogin)
+        -   [Error Responses](#error-responses)
+        -   [Rate Limiting](#rate-limiting)
+    -   [Technology Stack](#technology-stack-1)
+    -   [Services](#services-1)
+    -   [Features](#features-1)
+    -   [Setup and Configuration](#setup-and-configuration-1)
+        -   [Environment Variables](#environment-variables-1)
+        -   [Constants Configuration](#constants-configuration-1)
+        -   [Docker Setup](#docker-setup-1)
+        -   [Local Development](#local-development-1)
+        -   [Testing](#testing-1)
+    -   [API Documentation](#api-documentation-1)
+        -   [Base URL](#base-url-1)
+        -   [Authentication](#authentication-1)
+        -   [Endpoints](#endpoints-1)
+            -   [Currency Conversion](#currency-conversion-1)
+                -   [GET /currency/convert](#get-currencyconvert-1)
+            -   [Currency Management (Admin only)](#currency-management-admin-only-1)
+                -   [POST /currency](#post-currency-1)
+                -   [PUT /currency/{code}](#put-currencycode-1)
+                -   [DELETE /currency/{code}](#delete-currencycode-1)
+            -   [User Management](#user-management-1)
+                -   [POST /auth/register](#post-authregister-1)
+                -   [POST /auth/login](#post-authlogin-1)
+        -   [Error Responses](#error-responses-1)
+        -   [Rate Limiting](#rate-limiting-1)
 
--   USD
--   BRL
--   EUR
--   BTC
--   ETH
+## Project Description
 
-Other coins could be added as usage.
+This API was developed for the Bravo challenge. The goal was to create an API that could convert between various currencies, both real and fictional, with live and custom values.# Challenge Bravo
 
-Ex: USD to BRL, USD to BTC, ETH to BRL, etc...
+**Additionally, it should be noted that the API's base currency is USD**.
 
-The request must receive as parameters: The source currency, the amount to be converted and the final currency.
+## Technology Stack
 
-Ex: `?from=BTC&to=EUR&amount=123.45`
+This challenge was built using a modern, scalable technology stack:
 
-Also build an endpoint to add and remove API supported currencies using HTTP verbs.
+-   **Go (Golang) 1.22**: The core programming language, chosen for its performance, concurrency support, and robust standard library.
+-   **PostgreSQL**: A powerful, open-source relational database used for persistent storage of currency data, user information, and logs.
+-   **Redis**: An in-memory data structure store used as a caching layer to improve performance of frequent currency rate lookups.
+-   **Docker**: Used for containerization, ensuring consistent environments across development and production.
+-   **Docker Compose**: A tool for defining and running multi-container Docker applications, simplifying the setup and deployment process.
+-   **Chi Router**: A lightweight, idiomatic HTTP router for Go, providing a flexible and composable way to build APIs.
 
-The API must support conversion between FIAT, crypto and fictitious. Example: BRL->HURB, HURB->ETH
+## Services
 
-"Currency is the means by which monetary transactions are effected." (Wikipedia, 2021).
+1. **API Application**: The main service handling HTTP requests for currency conversion, user management, and currency administration.
+2. **PostgreSQL Database**: Stores user data, currency information, and logs.
+3. **Redis Cache**: Caches frequently accessed exchange rates for improved performance.
+4. **Migrator**: A standalone service for running database migrations to create and update the database schema, as well as
+   seeding the database for a default admin user.
 
-Therefore, it is possible to imagine that new coins come into existence or cease to exist, it is also possible to imagine fictitious coins such as Dungeons & Dragons coins being used in these transactions, such as how much is a Gold Piece (Dungeons & Dragons) in Real or how much is the GTA$1 in Real.
+## Features
 
-Let's consider the PSN quote where GTA$1,250,000.00 cost R$83.50 we clearly have a relationship between the currencies, so it is possible to create a quote. (Playstation Store, 2021).
+-   Real-time currency conversion
+-   User registration and authentication
+-   Admin-only currency management (add, update, remove currencies)
+-   Rate limiting to prevent abuse
+-   Logging and auditing of operations
+-   Scheduled updates of exchange rates
+-   Caching of frequently accessed data
+-   Comprehensive error handling and logging
+-   Containerized deployment for easy scaling and management
 
-Ref:
-Wikipedia [Institutional Website]. Available at: <https://pt.wikipedia.org/wiki/Currency>. Accessed on: 28 April 2021.
-Playstation Store [Virtual Store]. Available at: <https://store.playstation.com/pt-br/product/UP1004-CUSA00419_00-GTAVCASHPACK000D>. Accessed on: 28 April 2021.
+## Setup and Configuration
 
-You can use any programming language for the challenge. Below is the list of languages ​​that we here at Hurb have more affinity:
+This section outlines how to setup and configure this api, including environment variables and important constants.
 
--   JavaScript (NodeJS)
--   Python
--   Go
--   Ruby
--   C++
--   PHP
+One thing that is important to note is that the API uses an [external service](https://openexchangerates.org/) to get the exchange rates, so you will need
+an API token to use the service. To facilitate this proccess please use this API Key: `75cc9115d3524769a498914d118e093a`
 
-## Requirements
+### Environment Variables
 
--   Fork this challenge and create your project (or workspace) using your version of that repository, as soon as you finish the challenge, submit a _pull request_.
-    -   If you have any reason not to submit a _pull request_, create a private repository on Github, do every challenge on the **main** branch and don't forget to fill in the `pull-request.txt` file. As soon as you finish your development, add the user `automator-hurb` to your repository as a contributor and make it available for at least 30 days. **Do not add the `automator-hurb` until development is complete.**
-    -   If you have any problem creating the private repository, at the end of the challenge fill in the file called `pull-request.txt`, compress the project folder - including the `.git` folder - and send it to us by email.
--   The code needs to run on macOS or Ubuntu (preferably as a Docker container)
--   To run your code, all you need to do is run the following commands:
-    -   git clone \$your-fork
-    -   cd \$your-fork
-    -   command to install dependencies
-    -   command to run the application
--   The API can be written with or without the help of _frameworks_
-    -   If you choose to use a _framework_ that results in _boilerplate code_, mark in the README which piece of code was written by you. The more code you make, the more content we will have to rate.
--   The API needs to support a volume of 1000 requests per second in a stress test.
--   The API needs to include real and current quotes through integration with public currency quote APIs
+Create a `.env` file in the project root with the following variables:
 
-## Evaluation criteria
+-   `REDIS_PASSWORD`: Password for the Redis instance.
+-   `REDIS_ADDR`: Address and port of the Redis instance (e.g., "localhost:6379").
+-   `POSTGRES_USER`: Username for the PostgreSQL database.
+-   `POSTGRES_PASSWORD`: Password for the PostgreSQL database.
+-   `POSTGRES_HOST`: Hostname of the PostgreSQL database.
+-   `POSTGRES_PORT`: Port number for the PostgreSQL database.
+-   `POSTGRES_NAME`: Name of the PostgreSQL database.
+-   `API_KEY`: API key for the OpenExchangeRates.
+-   `SERVER_PORT`: Port on which the API server will listen.
 
--   **Organization of code**: Separation of modules, view and model, back-end and front-end
--   **Clarity**: Does the README explain briefly what the problem is and how can I run the application?
--   **Assertiveness**: Is the application doing what is expected? If something is missing, does the README explain why?
--   **Code readability** (including comments)
--   **Security**: Are there any clear vulnerabilities?
--   **Test coverage** (We don't expect full coverage)
--   **History of commits** (structure and quality)
--   **UX**: Is the interface user-friendly and self-explanatory? Is the API intuitive?
--   **Technical choices**: Is the choice of libraries, database, architecture, etc. the best choice for the application?
+Example `.env` file:
 
-## Doubts
+```
+REDIS_PASSWORD=myredispassword
+REDIS_ADDR=redis:6379
+POSTGRES_USER=myuser
+POSTGRES_PASSWORD=mypassword
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+POSTGRES_NAME=currency_db
+API_KEY=75cc9115d3524769a498914d118e093a
+SERVER_PORT=8080
+```
 
-Any questions you may have, check the [_issues_](https://github.com/HurbCom/challenge-bravo/issues) to see if someone hasn't already and if you can't find your answer, open one yourself. new issue!
+### Constants Configuration
 
-Godspeed! ;)
+The `internal/commons/constants.go` file contains important constants that can be adjusted to fine-tune the API's behavior:
+
+-   `AllowedCurrencyLength`: Maximum length of currency codes (default: 5).
+-   `MinimumCurrencyLength`: Minimum length of currency codes (default: 3).
+-   `AllowedRPS`: Rate limit for API requests per second (default: 10).
+-   `ExternalClientMaxRetries`: Maximum number of retries for external API calls (default: 3).
+-   `ExternalClientBaseDelay`: Base delay for exponential backoff in external API calls (default: 1 second).
+-   `ExternalClientMaxDelay`: Maximum delay for exponential backoff in external API calls (default: 30 seconds).
+-   `RateUpdaterCacheExipiration`: Expiration time for cached exchange rates (default: 1 hour).
+-   `ServerIdleTimeout`: Server idle timeout (default: 1 minute).
+-   `ServerReadTimeout`: Server read timeout (default: 10 seconds).
+-   `ServerWriteTimeout`: Server write timeout (default: 30 seconds).
+
+To modify these constants, edit the `internal/commons/constants.go` file and rebuild the application.
+
+### Docker Setup
+
+To run the application using Docker, follow these steps:
+
+1. Ensure you have Docker and Docker Compose installed on your system.
+
+2. Clone the repository:
+
+    ```bash
+    git clone git@github.com:Lutefd/challenge-bravo.git
+    cd challenge-bravo
+    ```
+
+3. Create a `.env` file in the project root and configure the necessary environment variables, a `.env.sample` file is provided (see API Configuration docs for details).
+
+4. Build and start the Docker containers:
+
+    ```
+    docker compose up --build
+    ```
+
+5. The API will be available at `http://localhost:8080` if you're using the default port
+   and host provided in the `.env.sample`.
+
+### Local Development
+
+For local development without Docker:
+
+1. Ensure you have Go 1.22 or later installed.
+2. Install [goose](https://github.com/pressly/goose) for database migrations.
+3. Set up the environment variables as described in the API Configuration docs.
+4. Run the database migrations:
+    ```
+    make migrate-up
+    ```
+5. Start the application:
+    ```
+    make run
+    ```
+
+### Testing
+
+Run the test suite with:
+
+```
+make test
+```
+
+For a more verbose output:
+
+```
+go test ./... -v
+```
+
+### Manual Testing
+
+There is a Postman collection in the `postman-collection.json` file inside of the `docs/postman` folder. You can import this collection into Postman and test the API endpoints.
+
+## API Documentation
+
+This section details the endpoints and operations available in this API. More information can be found in the Swagger documentation, in the c4 diagram, in the dependencies diagram, and in the entity diagram all located in the `docs` folder along with the Postman collection.
+
+### Base URL
+
+All endpoints are relative to: `http://localhost:8080/api/v1`
+
+### Swagger Documentation
+
+The API documentation is available at `http://localhost:8080/api/v1/reference`
+
+### Authentication
+
+Most endpoints require authentication using an API key. Include the API key in the `X-API-Key` header of your requests.
+
+### Endpoints
+
+#### Currency Conversion
+
+##### GET /currency/convert
+
+Convert an amount from one currency to another.
+
+Query Parameters:
+
+-   `from`: Source currency code (e.g., "USD")
+-   `to`: Target currency code (e.g., "EUR")
+-   `amount`: Amount to convert (numeric)
+
+Example Request:
+
+```
+GET /api/v1/currency/convert?from=USD&to=EUR&amount=100
+```
+
+Example Response:
+
+```json
+{
+    "from": "USD",
+    "to": "EUR",
+    "amount": 100,
+    "result": 85
+}
+```
+
+#### Currency Management (Admin only)
+
+##### POST /currency
+
+Add a new currency.
+
+Request Body:
+
+```json
+{
+    "code": "JPY",
+    "rate_to_usd": 110.5
+}
+```
+
+Example Response:
+
+```json
+{
+    "message": "currency added successfully"
+}
+```
+
+##### PUT /currency/{code}
+
+Update an existing currency.
+
+Request Body:
+
+```json
+{
+    "rate_to_usd": 111.2
+}
+```
+
+Example Response:
+
+```json
+{
+    "message": "currency updated successfully"
+}
+```
+
+##### DELETE /currency/{code}
+
+Remove a currency.
+
+Example Response:
+
+```json
+{
+    "message": "currency removed successfully"
+}
+```
+
+#### User Management
+
+##### POST /auth/register
+
+Register a new user.
+
+Request Body:
+
+```json
+{
+    "username": "newuser",
+    "password": "securepassword"
+}
+```
+
+Example Response:
+
+```json
+{
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "username": "newuser",
+    "role": "user",
+    "api_key": "your-api-key-here"
+}
+```
+
+##### POST /auth/login
+
+Authenticate a user and retrieve their API key.
+
+Request Body:
+
+```json
+{
+    "username": "existinguser",
+    "password": "userpassword"
+}
+```
+
+Example Response:
+
+```json
+{
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "username": "existinguser",
+    "role": "user",
+    "api_key": "your-api-key-here"
+}
+```
+
+    Update(ctx context.Context, username, password string) error
+
+### Error Responses
+
+The API uses standard HTTP status codes to indicate the success or failure of requests. In case of an error, the response body will contain an error message:
+
+```json
+{
+    "error": "Description of the error"
+}
+```
+
+Common error status codes:
+
+-   400: Bad Request (invalid input)
+-   401: Unauthorized (missing or invalid API key)
+-   403: Forbidden (insufficient permissions)
+-   404: Not Found (resource not found)
+-   429: Too Many Requests (rate limit exceeded)
+-   500: Internal Server Error
+
+### Rate Limiting
+
+The API implements rate limiting to prevent abuse in some endpoints. If you exceed the rate limit, you'll receive a 429 status code. Wait before making additional requests.
+
+This version of the API allows for the addition of new real currencies that will be tracked and fictional currencies that will be stored.
+
+**Additionally, it should be noted that the API's base currency is USD**.
+
+## Technology Stack
+
+This challenge was built using a modern, scalable technology stack:
+
+-   **Go (Golang) 1.22**: The core programming language, chosen for its performance, concurrency support, and robust standard library.
+-   **PostgreSQL**: A powerful, open-source relational database used for persistent storage of currency data, user information, and logs.
+-   **Redis**: An in-memory data structure store used as a caching layer to improve performance of frequent currency rate lookups.
+-   **Docker**: Used for containerization, ensuring consistent environments across development and production.
+-   **Docker Compose**: A tool for defining and running multi-container Docker applications, simplifying the setup and deployment process.
+-   **Chi Router**: A lightweight, idiomatic HTTP router for Go, providing a flexible and composable way to build APIs.
+
+## Services
+
+1. **API Application**: The main service handling HTTP requests for currency conversion, user management, and currency administration.
+2. **PostgreSQL Database**: Stores user data, currency information, and logs.
+3. **Redis Cache**: Caches frequently accessed exchange rates for improved performance.
+4. **Migrator**: A standalone service for running database migrations to create and update the database schema, as well as
+   seeding the database for a default admin user.
+
+## Features
+
+-   Real-time currency conversion
+-   User registration and authentication
+-   Admin-only currency management (add, update, remove currencies)
+-   Rate limiting to prevent abuse
+-   Logging and auditing of operations
+-   Scheduled updates of exchange rates
+-   Caching of frequently accessed data
+-   Comprehensive error handling and logging
+-   Containerized deployment for easy scaling and management
+
+## Setup and Configuration
+
+This section outlines how to setup and configure this api, including environment variables and important constants.
+
+One thing that is important to note is that the API uses an [external service](https://openexchangerates.org/) to get the exchange rates, so you will need
+an API token to use the service. To facilitate this proccess please use this API Key: `75cc9115d3524769a498914d118e093a`
+
+### Environment Variables
+
+Create a `.env` file in the project root with the following variables:
+
+-   `REDIS_PASSWORD`: Password for the Redis instance.
+-   `REDIS_ADDR`: Address and port of the Redis instance (e.g., "localhost:6379").
+-   `POSTGRES_USER`: Username for the PostgreSQL database.
+-   `POSTGRES_PASSWORD`: Password for the PostgreSQL database.
+-   `POSTGRES_HOST`: Hostname of the PostgreSQL database.
+-   `POSTGRES_PORT`: Port number for the PostgreSQL database.
+-   `POSTGRES_NAME`: Name of the PostgreSQL database.
+-   `API_KEY`: API key for the OpenExchangeRates.
+-   `SERVER_PORT`: Port on which the API server will listen.
+
+Example `.env` file:
+
+```
+REDIS_PASSWORD=myredispassword
+REDIS_ADDR=redis:6379
+POSTGRES_USER=myuser
+POSTGRES_PASSWORD=mypassword
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+POSTGRES_NAME=currency_db
+API_KEY=75cc9115d3524769a498914d118e093a
+SERVER_PORT=8080
+```
+
+### Constants Configuration
+
+The `internal/commons/constants.go` file contains important constants that can be adjusted to fine-tune the API's behavior:
+
+-   `AllowedCurrencyLength`: Maximum length of currency codes (default: 5).
+-   `MinimumCurrencyLength`: Minimum length of currency codes (default: 3).
+-   `AllowedRPS`: Rate limit for API requests per second (default: 10).
+-   `ExternalClientMaxRetries`: Maximum number of retries for external API calls (default: 3).
+-   `ExternalClientBaseDelay`: Base delay for exponential backoff in external API calls (default: 1 second).
+-   `ExternalClientMaxDelay`: Maximum delay for exponential backoff in external API calls (default: 30 seconds).
+-   `RateUpdaterCacheExipiration`: Expiration time for cached exchange rates (default: 1 hour).
+-   `ServerIdleTimeout`: Server idle timeout (default: 1 minute).
+-   `ServerReadTimeout`: Server read timeout (default: 10 seconds).
+-   `ServerWriteTimeout`: Server write timeout (default: 30 seconds).
+
+To modify these constants, edit the `internal/commons/constants.go` file and rebuild the application.
+
+### Docker Setup
+
+To run the application using Docker, follow these steps:
+
+1. Ensure you have Docker and Docker Compose installed on your system.
+
+2. Clone the repository:
+
+    ```bash
+    git clone git@github.com:Lutefd/challenge-bravo.git
+    cd challenge-bravo
+    ```
+
+3. Create a `.env` file in the project root and configure the necessary environment variables, a `.env.sample` file is provided (see API Configuration docs for details).
+
+4. Build and start the Docker containers:
+
+    ```
+    docker compose up --build
+    ```
+
+5. The API will be available at `http://localhost:8080` if you're using the default port
+   and host provided in the `.env.sample`.
+
+### Local Development
+
+For local development without Docker:
+
+1. Ensure you have Go 1.22 or later installed.
+2. Install [goose](https://github.com/pressly/goose) for database migrations.
+3. Set up the environment variables as described in the API Configuration docs.
+4. Run the database migrations:
+    ```
+    make migrate-up
+    ```
+5. Start the application:
+    ```
+    make run
+    ```
+
+### Testing
+
+Run the test suite with:
+
+```
+make test
+```
+
+For a more verbose output:
+
+```
+go test ./... -v
+```
+
+## API Documentation
+
+This section details the endpoints and operations available in this API.
+
+### Base URL
+
+All endpoints are relative to: `http://localhost:8080/api/v1`
+
+### Authentication
+
+Most endpoints require authentication using an API key. Include the API key in the `X-API-Key` header of your requests.
+
+### Endpoints
+
+#### Currency Conversion
+
+##### GET /currency/convert
+
+Convert an amount from one currency to another.
+
+Query Parameters:
+
+-   `from`: Source currency code (e.g., "USD")
+-   `to`: Target currency code (e.g., "EUR")
+-   `amount`: Amount to convert (numeric)
+
+Example Request:
+
+```
+GET /api/v1/currency/convert?from=USD&to=EUR&amount=100
+```
+
+Example Response:
+
+```json
+{
+    "from": "USD",
+    "to": "EUR",
+    "amount": 100,
+    "result": 85
+}
+```
+
+#### Currency Management (Admin only)
+
+##### POST /currency
+
+Add a new currency.
+
+Request Body:
+
+```json
+{
+    "code": "JPY",
+    "rate_to_usd": 110.5
+}
+```
+
+Example Response:
+
+```json
+{
+    "message": "currency added successfully"
+}
+```
+
+##### PUT /currency/{code}
+
+Update an existing currency.
+
+Request Body:
+
+```json
+{
+    "rate_to_usd": 111.2
+}
+```
+
+Example Response:
+
+```json
+{
+    "message": "currency updated successfully"
+}
+```
+
+##### DELETE /currency/{code}
+
+Remove a currency.
+
+Example Response:
+
+```json
+{
+    "message": "currency removed successfully"
+}
+```
+
+#### User Management
+
+##### POST /auth/register
+
+Register a new user.
+
+Request Body:
+
+```json
+{
+    "username": "newuser",
+    "password": "securepassword"
+}
+```
+
+Example Response:
+
+```json
+{
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "username": "newuser",
+    "role": "user",
+    "api_key": "your-api-key-here"
+}
+```
+
+##### POST /auth/login
+
+Authenticate a user and retrieve their API key.
+
+Request Body:
+
+```json
+{
+    "username": "existinguser",
+    "password": "userpassword"
+}
+```
+
+Example Response:
+
+```json
+{
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "username": "existinguser",
+    "role": "user",
+    "api_key": "your-api-key-here"
+}
+```
+
+    Update(ctx context.Context, username, password string) error
+
+### Error Responses
+
+The API uses standard HTTP status codes to indicate the success or failure of requests. In case of an error, the response body will contain an error message:
+
+```json
+{
+    "error": "Description of the error"
+}
+```
+
+Common error status codes:
+
+-   400: Bad Request (invalid input)
+-   401: Unauthorized (missing or invalid API key)
+-   403: Forbidden (insufficient permissions)
+-   404: Not Found (resource not found)
+-   429: Too Many Requests (rate limit exceeded)
+-   500: Internal Server Error
+
+### Rate Limiting
+
+The API implements rate limiting to prevent abuse in some endpoints. If you exceed the rate limit, you'll receive a 429 status code. Wait before making additional requests.
 
 <p align="center">
   <img src="ca.jpg" alt="Challange accepted" />
