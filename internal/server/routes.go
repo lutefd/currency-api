@@ -17,18 +17,20 @@ func (s *Server) registerRoutes(currencyService *service.CurrencyService, userSe
 	router.Get("/healthz", handler.HandlerReadiness)
 	currencyHandler := handler.NewCurrencyHandler(currencyService)
 	userHandler := handler.NewUserHandler(userService)
-	router.Route("/auth", func(r chi.Router) {
-		r.With(api_middleware.RateLimitMiddleware).Post("/register", userHandler.Register)
-		r.With(api_middleware.RateLimitMiddleware).Post("/login", userHandler.Login)
-	})
-	router.Route("/currency", func(r chi.Router) {
-		r.Get("/convert", currencyHandler.ConvertCurrency)
-		r.Group(func(r chi.Router) {
-			r.Use(authMiddleware.Authenticate)
-			r.Use(api_middleware.RequireRole(model.RoleAdmin))
-			r.Post("/", currencyHandler.AddCurrency)
-			r.Put("/{code}", currencyHandler.UpdateCurrency)
-			r.Delete("/{code}", currencyHandler.RemoveCurrency)
+	router.Route("/api/v1", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
+			r.With(api_middleware.RateLimitMiddleware).Post("/register", userHandler.Register)
+			r.With(api_middleware.RateLimitMiddleware).Post("/login", userHandler.Login)
+		})
+		r.Route("/currency", func(r chi.Router) {
+			r.Get("/convert", currencyHandler.ConvertCurrency)
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.Authenticate)
+				r.Use(api_middleware.RequireRole(model.RoleAdmin))
+				r.Post("/", currencyHandler.AddCurrency)
+				r.Put("/{code}", currencyHandler.UpdateCurrency)
+				r.Delete("/{code}", currencyHandler.RemoveCurrency)
+			})
 		})
 	})
 	s.Router = router

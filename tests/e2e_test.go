@@ -160,7 +160,12 @@ func teardown() error {
 		}
 	}
 
-	connURL, err := url.Parse(os.Getenv("POSTGRES_CONN"))
+	pg_host := os.Getenv("POSTGRES_HOST")
+	pg_port := os.Getenv("POSTGRES_PORT")
+	pg_user := os.Getenv("POSTGRES_USER")
+	pg_pass := os.Getenv("POSTGRES_PASSWORD")
+	pg_db := os.Getenv("POSTGRES_NAME")
+	connURL, err := url.Parse(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", pg_user, pg_pass, pg_host, pg_port, pg_db))
 	if err != nil {
 		return fmt.Errorf("error parsing database URL: %w", err)
 	}
@@ -212,7 +217,7 @@ func TestEndToEnd(t *testing.T) {
 			"password": "testpassword",
 		}
 		body, _ := json.Marshal(payload)
-		req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
+		req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		rr := httptest.NewRecorder()
@@ -235,7 +240,7 @@ func TestEndToEnd(t *testing.T) {
 			"password": "testpassword",
 		}
 		body, _ := json.Marshal(payload)
-		req := httptest.NewRequest("POST", "/auth/login", bytes.NewBuffer(body))
+		req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		rr := httptest.NewRecorder()
@@ -296,7 +301,7 @@ func TestEndToEnd(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				url := fmt.Sprintf("/currency/convert?from=%s&to=%s&amount=%s", tc.from, tc.to, tc.amount)
+				url := fmt.Sprintf("/api/v1/currency/convert?from=%s&to=%s&amount=%s", tc.from, tc.to, tc.amount)
 				req := httptest.NewRequest("GET", url, nil)
 				req.Header.Set("X-API-Key", apiKey)
 
@@ -326,7 +331,7 @@ func TestEndToEnd(t *testing.T) {
 			"rate_to_usd": 0.75,
 		}
 		body, _ := json.Marshal(payload)
-		req := httptest.NewRequest("POST", "/currency", bytes.NewBuffer(body))
+		req := httptest.NewRequest("POST", "/api/v1/currency", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-API-Key", adminAPIKey)
 
@@ -347,7 +352,7 @@ func TestEndToEnd(t *testing.T) {
 			"rate_to_usd": 0.78,
 		}
 		body, _ := json.Marshal(payload)
-		req := httptest.NewRequest("PUT", "/currency/GBPT", bytes.NewBuffer(body))
+		req := httptest.NewRequest("PUT", "/api/v1/currency/GBPT", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-API-Key", adminAPIKey)
 
@@ -364,7 +369,7 @@ func TestEndToEnd(t *testing.T) {
 	})
 
 	t.Run("Remove Currency", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", "/currency/GBPT", nil)
+		req := httptest.NewRequest("DELETE", "/api/v1/currency/GBPT", nil)
 		req.Header.Set("X-API-Key", adminAPIKey)
 
 		rr := httptest.NewRecorder()
