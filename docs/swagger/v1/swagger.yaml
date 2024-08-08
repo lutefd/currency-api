@@ -1,0 +1,349 @@
+openapi: 3.0.0
+info:
+  title: Bravo Currency Conversion API
+  version: 1.0.0
+  description: Currency conversion API currency service made by Luis Dourado for the Hurb Bravo Challenge
+
+servers:
+  - url: http://localhost:8080/api/v1
+
+paths:
+  /currency/convert:
+    get:
+      summary: Convert currency
+      description: Convert an amount from one currency to another
+      tags:
+        - Currency
+      parameters:
+        - name: from
+          in: query
+          required: true
+          example: "USD"
+          schema:
+            type: string
+        - name: to
+          in: query
+          example: "BRL"
+          required: true
+          schema:
+            type: string
+        - name: amount
+          in: query
+          example: 100
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Successful conversion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from:
+                    type: string
+                  to:
+                    type: string
+                  amount:
+                    type: number
+                  result:
+                    type: number
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Bad request
+        "404":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Currency not found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Internal server error
+
+  /currency:
+    post:
+      summary: Add a new currency
+      description: Add a new currency to the system
+      tags:
+        - Currency
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurrencyInput"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+          description: Currency added successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Bad request
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Internal server error
+  /currency/{code}:
+    put:
+      summary: Update a currency
+      description: Update the rate of an existing currency
+      tags:
+        - Currency
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurrencyInput"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+          description: Currency updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Bad request
+        "404":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Currency not found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Internal server error
+
+    delete:
+      summary: Remove a currency
+      description: Remove an existing currency from the system
+      tags:
+        - Currency
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+          description: Currency removed successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Bad request
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Internal server error
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      description: Register a new user in the system
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegistration"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Bad request
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Internal server error
+
+  /auth/login:
+    post:
+      summary: User login
+      description: Authenticate a user and return an API key
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "200":
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Bad request
+        "401":
+          description: Invalid credentials
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Internal server error
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    CurrencyInput:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "USD"
+        rate_to_usd:
+          type: number
+          example: 1.0
+
+    UserRegistration:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "username"
+        password:
+          type: string
+          example: "password"
+
+    UserLogin:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "username"
+        password:
+          type: string
+          example: "password"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        role:
+          type: string
+        api_key:
+          type: string
