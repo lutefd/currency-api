@@ -252,22 +252,72 @@ func TestEndToEnd(t *testing.T) {
 	})
 
 	t.Run("Convert Currency", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/currency/convert?from=USD&to=EUR&amount=100", nil)
-		req.Header.Set("X-API-Key", apiKey)
+		testCases := []struct {
+			name           string
+			from           string
+			to             string
+			amount         string
+			expectedStatus int
+			expectedBody   map[string]interface{}
+		}{
+			{
+				name:           "Valid conversion",
+				from:           "USD",
+				to:             "EUR",
+				amount:         "100",
+				expectedStatus: http.StatusOK,
+				expectedBody: map[string]interface{}{
+					"from":   "USD",
+					"to":     "EUR",
+					"amount": float64(100),
+				},
+			},
+			{
+				name:           "From currency not found",
+				from:           "XYZ",
+				to:             "EUR",
+				amount:         "100",
+				expectedStatus: http.StatusNotFound,
+				expectedBody: map[string]interface{}{
+					"error": "currency not found: XYZ",
+				},
+			},
+			{
+				name:           "To currency not found",
+				from:           "USD",
+				to:             "XYZ",
+				amount:         "100",
+				expectedStatus: http.StatusNotFound,
+				expectedBody: map[string]interface{}{
+					"error": "currency not found: XYZ",
+				},
+			},
+		}
 
-		rr := httptest.NewRecorder()
-		testServer.Router.ServeHTTP(rr, req)
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				url := fmt.Sprintf("/currency/convert?from=%s&to=%s&amount=%s", tc.from, tc.to, tc.amount)
+				req := httptest.NewRequest("GET", url, nil)
+				req.Header.Set("X-API-Key", apiKey)
 
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected status code 200, got %d", rr.Code)
+				rr := httptest.NewRecorder()
+				testServer.Router.ServeHTTP(rr, req)
 
-		var response map[string]interface{}
-		err := json.Unmarshal(rr.Body.Bytes(), &response)
-		require.NoError(t, err)
+				assert.Equal(t, tc.expectedStatus, rr.Code, "Expected status code %d, got %d", tc.expectedStatus, rr.Code)
 
-		assert.Equal(t, "USD", response["from"])
-		assert.Equal(t, "EUR", response["to"])
-		assert.Equal(t, float64(100), response["amount"])
-		assert.NotNil(t, response["result"])
+				var response map[string]interface{}
+				err := json.Unmarshal(rr.Body.Bytes(), &response)
+				require.NoError(t, err)
+
+				for key, expectedValue := range tc.expectedBody {
+					assert.Equal(t, expectedValue, response[key], "For key '%s', expected %v, got %v", key, expectedValue, response[key])
+				}
+
+				if tc.expectedStatus == http.StatusOK {
+					assert.NotNil(t, response["result"], "Result should not be nil for successful conversion")
+				}
+			})
+		}
 	})
 
 	t.Run("Add Currency", func(t *testing.T) {
