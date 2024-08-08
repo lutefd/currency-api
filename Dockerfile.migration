@@ -1,17 +1,14 @@
 FROM golang:1.22
-
-WORKDIR /migrations
-
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
-
 RUN apt-get update && apt-get install -y postgresql-client
-
-COPY ./sql/schema /migrations/
-
-COPY run_migrations.sh /migrations/run_migrations.sh
-
-# Make the script executable
-RUN chmod +x /migrations/run_migrations.sh
-
-# Define the entry point
-ENTRYPOINT ["/migrations/run_migrations.sh"]
+COPY ./sql/schema /app/migrations/
+COPY run_migrations.sh /app/
+COPY run_seed.sh /app/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o seed cmd/seed/seed.go
+RUN chmod +x run_seed.sh
+RUN chmod +x run_migrations.sh
+ENTRYPOINT ["/app/run_migrations.sh"]
