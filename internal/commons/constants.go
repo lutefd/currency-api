@@ -14,4 +14,5 @@ const (
 	ServerIdleTimeout           = time.Minute
 	ServerReadTimeout           = 10 * time.Second
 	ServerWriteTimeout          = 30 * time.Second
+	CacheExpiration             = 1 * time.Hour
 )

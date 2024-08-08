@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -81,6 +82,25 @@ func (m *mockExternalAPI) FetchRates(ctx context.Context) (*model.ExchangeRates,
 	}, nil
 }
 
+type mockExternalAPIWithCounter struct {
+	rates     map[string]float64
+	callCount int
+	mu        sync.Mutex
+}
+
+func (m *mockExternalAPIWithCounter) FetchRates(ctx context.Context) (*model.ExchangeRates, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.callCount++
+	return &model.ExchangeRates{Rates: m.rates}, nil
+}
+
+func (m *mockExternalAPIWithCounter) GetCallCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.callCount
+}
+
 func TestCurrencyService_Convert(t *testing.T) {
 	repo := &mockRepository{
 		currencies: map[string]*model.Currency{
@@ -124,6 +144,7 @@ func TestCurrencyService_Convert(t *testing.T) {
 				assert.Error(t, err)
 				assert.True(t, errors.Is(err, tt.expectedError), "Expected error %v, but got %v", tt.expectedError, err)
 				if tt.expectedError == model.ErrCurrencyNotFound {
+					assert.Contains(t, err.Error(), "currency not found")
 					if tt.from == "XYZ" {
 						assert.Contains(t, err.Error(), tt.from, "Error should contain the 'from' currency code")
 					} else {
@@ -136,6 +157,50 @@ func TestCurrencyService_Convert(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Negative cache", func(t *testing.T) {
+		repo := &mockRepository{currencies: map[string]*model.Currency{}}
+		cache := &mockCache{data: map[string]float64{}}
+		externalAPI := &mockExternalAPIWithCounter{rates: map[string]float64{}}
+		currencyService := service.NewCurrencyService(repo, cache, externalAPI)
+
+		_, err1 := currencyService.Convert(context.Background(), "XYZ", "USD", 100)
+		assert.Error(t, err1)
+		assert.True(t, errors.Is(err1, model.ErrCurrencyNotFound))
+		assert.Equal(t, 1, externalAPI.GetCallCount(), "Expected external API to be called once")
+
+		_, err2 := currencyService.Convert(context.Background(), "XYZ", "USD", 100)
+		assert.Error(t, err2)
+		assert.True(t, errors.Is(err2, model.ErrCurrencyNotFound))
+		assert.Equal(t, 1, externalAPI.GetCallCount(), "Expected external API to still have been called only once")
+
+		_, err3 := currencyService.Convert(context.Background(), "ABC", "USD", 100)
+		assert.Error(t, err3)
+		assert.True(t, errors.Is(err3, model.ErrCurrencyNotFound))
+		assert.Equal(t, 2, externalAPI.GetCallCount(), "Expected external API to be called a second time for a new currency")
+	})
+	t.Run("Concurrent requests", func(t *testing.T) {
+		var wg sync.WaitGroup
+		results := make([]float64, 10)
+		errors := make([]error, 10)
+
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func(index int) {
+				defer wg.Add(-1)
+				result, err := currencyService.Convert(context.Background(), "USD", "EUR", 100)
+				results[index] = result
+				errors[index] = err
+			}(i)
+		}
+
+		wg.Wait()
+
+		for i := 0; i < 10; i++ {
+			assert.NoError(t, errors[i])
+			assert.InDelta(t, 85.0, results[i], 0.001)
+		}
+	})
 }
 
 func TestCurrencyService_AddCurrency(t *testing.T) {
