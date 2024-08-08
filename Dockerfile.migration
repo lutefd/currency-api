@@ -7,8 +7,6 @@ RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 RUN apt-get update && apt-get install -y postgresql-client
 COPY ./sql/schema /app/migrations/
 COPY run_migrations.sh /app/
-COPY run_seed.sh /app/
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o seed cmd/seed/seed.go
-RUN chmod +x run_seed.sh
 RUN chmod +x run_migrations.sh
 ENTRYPOINT ["/app/run_migrations.sh"]
