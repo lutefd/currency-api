@@ -17,5 +17,6 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /app/main .
+COPY --from=builder /app/docs/swagger /root/docs/swagger
 
 CMD ["./main"]
