@@ -71,6 +71,32 @@ func TestUserService_GetByUsername(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
+func TestUserService_GetByAPIKey(t *testing.T) {
+	mockRepo := new(MockUserRepository)
+	service := NewUserService(mockRepo)
+
+	ctx := context.Background()
+	api_key := "test-api-key"
+	userDB := &model.UserDB{
+		ID:       uuid.New(),
+		Username: "testuser",
+		Role:     model.RoleUser,
+		APIKey:   "test-api-key",
+	}
+
+	mockRepo.On("GetByAPIKey", ctx, api_key).Return(userDB, nil)
+
+	user, err := service.GetByAPIKey(ctx, api_key)
+
+	assert.NoError(t, err)
+	assert.Equal(t, userDB.Username, user.Username)
+	assert.Equal(t, userDB.ID, user.ID)
+	assert.Equal(t, userDB.Role, user.Role)
+	assert.Equal(t, api_key, user.APIKey)
+
+	mockRepo.AssertExpectations(t)
+}
+
 func TestUserService_Create(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	service := NewUserService(mockRepo)
