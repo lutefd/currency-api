@@ -1,0 +1,48 @@
+graph TD
+    A[main] --> B[server]
+    A --> C[logger]
+    
+    B --> D[handler]
+    B --> E[middleware]
+    B --> F[service]
+    B --> G[repository]
+    B --> H[cache]
+    B --> I[worker]
+    
+    D --> F
+    D --> J[model]
+    D --> K[commons]
+    
+    E --> G
+    E --> J
+    E --> K
+    
+    F --> G
+    F --> H
+    F --> I
+    F --> J
+    
+    G --> J
+    
+    H --> J
+    
+    I --> J
+    I --> G
+    I --> H
+    
+    C --> G
+    C --> J
+
+    subgraph External Dependencies
+        L[chi]
+        M[redis]
+        N[postgres]
+        O[uuid]
+        P[bcrypt]
+    end
+
+    B --> L
+    H --> M
+    G --> N
+    F --> O
+    F --> P
