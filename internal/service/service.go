@@ -19,6 +19,5 @@ type UserServiceInterface interface {
 	GetByAPIKey(ctx context.Context, apiKey string) (model.User, error)
 	Authenticate(ctx context.Context, username, password string) (model.User, error)
 	Create(ctx context.Context, username, password string) (model.User, error)
-	Update(ctx context.Context, username, password string) error
 	Delete(ctx context.Context, username string) error
 }

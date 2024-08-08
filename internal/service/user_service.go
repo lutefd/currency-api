@@ -58,27 +58,6 @@ func (s *UserService) Create(ctx context.Context, username, password string) (mo
 	return user.ToUser(), nil
 }
 
-func (s *UserService) Update(ctx context.Context, username, password string) error {
-	userDB, err := s.userRepo.GetByUsername(ctx, username)
-	if err != nil {
-		return fmt.Errorf("failed to get user: %w", err)
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	userDB.Password = string(hashedPassword)
-	userDB.UpdatedAt = time.Now()
-
-	if err := s.userRepo.Update(ctx, userDB); err != nil {
-		return fmt.Errorf("failed to update user: %w", err)
-	}
-
-	return nil
-}
-
 func (s *UserService) Delete(ctx context.Context, username string) error {
 	if err := s.userRepo.Delete(ctx, username); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
