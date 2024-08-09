@@ -721,6 +721,6 @@ There are a lot of improvements that could be made to this project, I decided to
 
 I learned a lot while doing this challenge, there were a lot of things that could be improved and I'm going to keep studying so I can improve my skills and be able to do better in my next projects. It was a bit difficult to find the time to do this project, but I'm happy to have done it and I'm happy with the result.
 
-<p align="center">2
+<p align="center">
   <img src="ca.jpg" alt="Challange accepted" />
 </p>
