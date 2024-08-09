@@ -137,7 +137,7 @@ SERVER_PORT=8080
 
 The `internal/commons/constants.go` file contains important constants that can be adjusted to fine-tune the API's behavior:
 
--   `AllowedCurrencyLength`: Maximum length of currency codes (default: 5).
+-   `AllowedCurrencyLength`: Maximum length of currency codes (default: 5). For this one you'll also need to change the `005_expand_currency_code.sql` migration
 -   `MinimumCurrencyLength`: Minimum length of currency codes (default: 3).
 -   `AllowedRPS`: Rate limit for API requests per second (default: 10).
 -   `ExternalClientMaxRetries`: Maximum number of retries for external API calls (default: 3).
