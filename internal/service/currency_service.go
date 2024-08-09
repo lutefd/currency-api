@@ -3,31 +3,23 @@ package service
 import (
 	"context"
 	"fmt"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/Lutefd/challenge-bravo/internal/cache"
-	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/Lutefd/challenge-bravo/internal/repository"
-	"github.com/Lutefd/challenge-bravo/internal/worker"
 	"github.com/google/uuid"
 )
 
 type CurrencyService struct {
-	repo          repository.CurrencyRepository
-	cache         cache.Cache
-	externalAPI   worker.ExternalAPIClient
-	inFlightReqs  sync.Map
-	negativeCache sync.Map
+	repo  repository.CurrencyRepository
+	cache cache.Cache
 }
 
-func NewCurrencyService(repo repository.CurrencyRepository, cache cache.Cache, externalAPI worker.ExternalAPIClient) *CurrencyService {
+func NewCurrencyService(repo repository.CurrencyRepository, cache cache.Cache) *CurrencyService {
 	return &CurrencyService{
-		repo:        repo,
-		cache:       cache,
-		externalAPI: externalAPI,
+		repo:  repo,
+		cache: cache,
 	}
 }
 
@@ -36,7 +28,6 @@ func (s *CurrencyService) Convert(ctx context.Context, from, to string, amount f
 	if err != nil {
 		return 0, err
 	}
-
 	toRate, err := s.getRate(ctx, to)
 	if err != nil {
 		return 0, err
@@ -53,56 +44,14 @@ func (s *CurrencyService) getRate(ctx context.Context, code string) (float64, er
 		return rate, nil
 	}
 
-	if _, found := s.negativeCache.Load(code); found {
-		return 0, fmt.Errorf("%w: %s", model.ErrCurrencyNotFound, code)
-	}
-
-	ch := make(chan struct{})
-	actualCh, loaded := s.inFlightReqs.LoadOrStore(code, ch)
-	if loaded {
-		<-actualCh.(chan struct{})
-		rate, err := s.cache.Get(ctx, code)
-		if err == nil {
-			return rate, nil
-		}
-	} else {
-		defer close(ch)
-	}
-	defer s.inFlightReqs.Delete(code)
-
 	currency, err := s.repo.GetByCode(ctx, code)
-	if err == nil {
-		s.cache.Set(ctx, code, currency.Rate, commons.CacheExpiration)
-		return currency.Rate, nil
-	}
-
-	rates, err := s.externalAPI.FetchRates(ctx)
 	if err != nil {
-		return 0, err
-	}
-
-	rate, ok := rates.Rates[code]
-	if !ok {
-		s.negativeCache.Store(code, struct{}{})
-		go func() {
-			time.Sleep(commons.CacheExpiration)
-			s.negativeCache.Delete(code)
-		}()
 		return 0, fmt.Errorf("%w: %s", model.ErrCurrencyNotFound, code)
 	}
 
-	currency = &model.Currency{
-		Code:      strings.ToUpper(code),
-		Rate:      rate,
-		UpdatedAt: time.Now(),
-	}
-	err = s.repo.Create(ctx, currency)
-	if err != nil {
-		return 0, err
-	}
+	s.cache.Set(ctx, code, currency.Rate, 1*time.Hour)
 
-	s.cache.Set(ctx, code, rate, 1*time.Hour)
-	return rate, nil
+	return currency.Rate, nil
 }
 
 func (s *CurrencyService) AddCurrency(ctx context.Context, currency *model.Currency) error {

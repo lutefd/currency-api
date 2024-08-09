@@ -44,7 +44,7 @@ func NewServer(config Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to initialize cache: %w", err)
 	}
 	externalAPI := worker.NewOpenExchangeRatesClient(config.APIKey)
-	currencyService := service.NewCurrencyService(repo, redisCache, externalAPI)
+	currencyService := service.NewCurrencyService(repo, redisCache)
 	userService := service.NewUserService(userRepo)
 	rateUpdater := worker.NewRateUpdater(repo, redisCache, externalAPI, 1*time.Hour)
 	logger.InitLogger(logRepo)

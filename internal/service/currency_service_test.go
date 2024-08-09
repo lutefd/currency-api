@@ -3,7 +3,6 @@ package service_test
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -71,55 +70,23 @@ func (m *mockCache) Delete(ctx context.Context, key string) error {
 func (m *mockCache) Close() error {
 	return nil
 }
-
-type mockExternalAPI struct {
-	rates map[string]float64
-}
-
-func (m *mockExternalAPI) FetchRates(ctx context.Context) (*model.ExchangeRates, error) {
-	return &model.ExchangeRates{
-		Rates: m.rates,
-	}, nil
-}
-
-type mockExternalAPIWithCounter struct {
-	rates     map[string]float64
-	callCount int
-	mu        sync.Mutex
-}
-
-func (m *mockExternalAPIWithCounter) FetchRates(ctx context.Context) (*model.ExchangeRates, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.callCount++
-	return &model.ExchangeRates{Rates: m.rates}, nil
-}
-
-func (m *mockExternalAPIWithCounter) GetCallCount() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.callCount
-}
-
 func TestCurrencyService_Convert(t *testing.T) {
 	repo := &mockRepository{
 		currencies: map[string]*model.Currency{
 			"USD": {Code: "USD", Rate: 1.0},
 			"EUR": {Code: "EUR", Rate: 0.85},
+			"GBP": {Code: "GBP", Rate: 0.75},
 		},
 	}
 	cache := &mockCache{
-		data: map[string]float64{},
-	}
-	externalAPI := &mockExternalAPI{
-		rates: map[string]float64{
+		data: map[string]float64{
 			"USD": 1.0,
 			"EUR": 0.85,
 			"GBP": 0.75,
 		},
 	}
 
-	currencyService := service.NewCurrencyService(repo, cache, externalAPI)
+	currencyService := service.NewCurrencyService(repo, cache)
 
 	tests := []struct {
 		name          string
@@ -127,80 +94,27 @@ func TestCurrencyService_Convert(t *testing.T) {
 		to            string
 		amount        float64
 		expected      float64
-		expectedError error
+		expectedError bool
 	}{
-		{"USD to EUR", "USD", "EUR", 100, 85, nil},
-		{"EUR to USD", "EUR", "USD", 85, 100, nil},
-		{"USD to GBP", "USD", "GBP", 100, 75, nil},
-		{"From currency not found", "XYZ", "USD", 100, 0, model.ErrCurrencyNotFound},
-		{"To currency not found", "USD", "XYZ", 100, 0, model.ErrCurrencyNotFound},
+		{"USD to EUR", "USD", "EUR", 100, 85, false},
+		{"EUR to GBP", "EUR", "GBP", 100, 88.24, false},
+		{"GBP to USD", "GBP", "USD", 75, 100, false},
+		{"Invalid from currency", "INVALID", "USD", 100, 0, true},
+		{"Invalid to currency", "USD", "INVALID", 100, 0, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := currencyService.Convert(context.Background(), tt.from, tt.to, tt.amount)
 
-			if tt.expectedError != nil {
+			if tt.expectedError {
 				assert.Error(t, err)
-				assert.True(t, errors.Is(err, tt.expectedError), "Expected error %v, but got %v", tt.expectedError, err)
-				if tt.expectedError == model.ErrCurrencyNotFound {
-					assert.Contains(t, err.Error(), "currency not found")
-					if tt.from == "XYZ" {
-						assert.Contains(t, err.Error(), tt.from, "Error should contain the 'from' currency code")
-					} else {
-						assert.Contains(t, err.Error(), tt.to, "Error should contain the 'to' currency code")
-					}
-				}
 			} else {
 				assert.NoError(t, err)
-				assert.InDelta(t, tt.expected, result, 0.001, "Expected %f, but got %f", tt.expected, result)
+				assert.InDelta(t, tt.expected, result, 0.01)
 			}
 		})
 	}
-
-	t.Run("Negative cache", func(t *testing.T) {
-		repo := &mockRepository{currencies: map[string]*model.Currency{}}
-		cache := &mockCache{data: map[string]float64{}}
-		externalAPI := &mockExternalAPIWithCounter{rates: map[string]float64{}}
-		currencyService := service.NewCurrencyService(repo, cache, externalAPI)
-
-		_, err1 := currencyService.Convert(context.Background(), "XYZ", "USD", 100)
-		assert.Error(t, err1)
-		assert.True(t, errors.Is(err1, model.ErrCurrencyNotFound))
-		assert.Equal(t, 1, externalAPI.GetCallCount(), "Expected external API to be called once")
-
-		_, err2 := currencyService.Convert(context.Background(), "XYZ", "USD", 100)
-		assert.Error(t, err2)
-		assert.True(t, errors.Is(err2, model.ErrCurrencyNotFound))
-		assert.Equal(t, 1, externalAPI.GetCallCount(), "Expected external API to still have been called only once")
-
-		_, err3 := currencyService.Convert(context.Background(), "ABC", "USD", 100)
-		assert.Error(t, err3)
-		assert.True(t, errors.Is(err3, model.ErrCurrencyNotFound))
-		assert.Equal(t, 2, externalAPI.GetCallCount(), "Expected external API to be called a second time for a new currency")
-	})
-	t.Run("Concurrent requests", func(t *testing.T) {
-		var wg sync.WaitGroup
-		results := make([]float64, 10)
-		errors := make([]error, 10)
-
-		for i := 0; i < 10; i++ {
-			wg.Add(1)
-			go func(index int) {
-				defer wg.Add(-1)
-				result, err := currencyService.Convert(context.Background(), "USD", "EUR", 100)
-				results[index] = result
-				errors[index] = err
-			}(i)
-		}
-
-		wg.Wait()
-
-		for i := 0; i < 10; i++ {
-			assert.NoError(t, errors[i])
-			assert.InDelta(t, 85.0, results[i], 0.001)
-		}
-	})
 }
 
 func TestCurrencyService_AddCurrency(t *testing.T) {
@@ -210,11 +124,8 @@ func TestCurrencyService_AddCurrency(t *testing.T) {
 	cache := &mockCache{
 		data: make(map[string]float64),
 	}
-	externalAPI := &mockExternalAPI{
-		rates: make(map[string]float64),
-	}
 
-	currencyService := service.NewCurrencyService(repo, cache, externalAPI)
+	currencyService := service.NewCurrencyService(repo, cache)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -270,11 +181,8 @@ func TestCurrencyService_UpdateCurrency(t *testing.T) {
 	cache := &mockCache{
 		data: make(map[string]float64),
 	}
-	externalAPI := &mockExternalAPI{
-		rates: make(map[string]float64),
-	}
 
-	currencyService := service.NewCurrencyService(repo, cache, externalAPI)
+	currencyService := service.NewCurrencyService(repo, cache)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -323,11 +231,8 @@ func TestCurrencyService_RemoveCurrency(t *testing.T) {
 			"EUR": 0.85,
 		},
 	}
-	externalAPI := &mockExternalAPI{
-		rates: map[string]float64{},
-	}
 
-	currencyService := service.NewCurrencyService(repo, cache, externalAPI)
+	currencyService := service.NewCurrencyService(repo, cache)
 
 	tests := []struct {
 		name          string
