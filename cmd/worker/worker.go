@@ -112,7 +112,18 @@ func initDependencies(config commons.Config) (*dependencies, error) {
 func runWorker(ctx context.Context, deps *dependencies) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)
-
+	go func() {
+		heartbeat := time.NewTicker(commons.WorkerHeartbeatInterval)
+		defer heartbeat.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-heartbeat.C:
+				log.Println("worker heartbeat")
+			}
+		}
+	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

@@ -12,6 +12,7 @@ const (
 	ExternalClientMaxDelay      = 30 * time.Second
 	RateUpdaterCacheExipiration = 1 * time.Hour
 	RateUpdaterInterval         = 1 * time.Hour
+	WorkerHeartbeatInterval     = 5 * time.Minute
 	ServerIdleTimeout           = time.Minute
 	ServerReadTimeout           = 10 * time.Second
 	ServerWriteTimeout          = 30 * time.Second
