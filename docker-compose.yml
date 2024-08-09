@@ -10,6 +10,8 @@ services:
         condition: service_started
       migrate:
         condition: service_completed_successfully
+      worker:
+        condition: service_started
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       POSTGRES_HOST: db
@@ -60,6 +62,32 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - mynetwork
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_NAME: ${POSTGRES_NAME}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      REDIS_ADDR: redis:6379
+      API_KEY: ${API_KEY}
+      SERVER_PORT: ${SERVER_PORT}
     networks:
       - mynetwork
 
