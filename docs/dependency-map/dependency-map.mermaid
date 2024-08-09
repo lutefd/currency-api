@@ -1,37 +1,38 @@
 graph TD
     A[main] --> B[server]
     A --> C[logger]
-    
-    B --> D[handler]
-    B --> E[middleware]
-    B --> F[service]
-    B --> G[repository]
-    B --> H[cache]
-    B --> I[worker]
-    
-    D --> F
-    D --> J[model]
-    D --> K[commons]
-    
+    A --> D[commons]
+
+    B --> E[handler]
+    B --> F[middleware]
+    B --> G[service]
+    B --> H[repository]
+    B --> I[cache]
+    B --> J[worker]
+
     E --> G
-    E --> J
-    E --> K
-    
-    F --> G
+    E --> K[model]
+    E --> D
+
     F --> H
-    F --> I
-    F --> J
-    
+    F --> K
+    F --> D
+
+    G --> H
+    G --> I
     G --> J
-    
-    H --> J
-    
-    I --> J
-    I --> G
-    I --> H
-    
-    C --> G
-    C --> J
+    G --> K
+
+    H --> K
+
+    I --> K
+
+    J --> K
+    J --> H
+    J --> I
+
+    C --> H
+    C --> K
 
     subgraph External Dependencies
         L[chi]
@@ -39,10 +40,18 @@ graph TD
         N[postgres]
         O[uuid]
         P[bcrypt]
+        Q[goose]
+        R[sqlmock]
+        S[miniredis]
+        T[cron]
     end
 
     B --> L
-    H --> M
-    G --> N
-    F --> O
-    F --> P
+    I --> M
+    H --> N
+    G --> O
+    G --> P
+    H --> Q
+    H --> R
+    I --> S
+    J --> T

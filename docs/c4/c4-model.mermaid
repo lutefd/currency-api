@@ -1,50 +1,64 @@
 graph TB
     subgraph "System Context"
-        U["User"]
-        A["Admin"]
-        E["External Exchange Rate API"]
+        User["User"]
+        Admin["Admin"]
+        ExternalAPI["External Exchange Rate API"]
         CES["Currency Exchange System"]
     end
 
-    U -->|"Uses"| CES
-    A -->|"Manages"| CES
-    E -->|"Provides rates"| CES
+    User -->|"Uses"| CES
+    Admin -->|"Manages"| CES
+    ExternalAPI -->|"Provides rates"| CES
 
     subgraph "Container"
-        API["API Application"]
-        DB["PostgreSQL Database"]
-        Cache["Redis Cache"]
-        Worker["Rate Updater Worker"]
+        API["API Application\n(Go)"]
+        Worker["Rate Updater Worker\n(Go)"]
+        DB["Database\n(PostgreSQL)"]
+        Cache["Cache\n(Redis)"]
     end
 
     CES -->|"Contains"| API
+    CES -->|"Contains"| Worker
     CES -->|"Contains"| DB
     CES -->|"Contains"| Cache
-    CES -->|"Contains"| Worker
 
     API -->|"Reads/Writes"| DB
     API -->|"Reads/Writes"| Cache
     Worker -->|"Updates"| DB
     Worker -->|"Updates"| Cache
-    Worker -->|"Fetches rates"| E
+    Worker -->|"Fetches rates"| ExternalAPI
 
-    subgraph "Component"
-        H["Handlers"]
-        S["Services"]
-        R["Repositories"]
-        M["Middleware"]
-        L["Logger"]
+    subgraph "Component (API Application)"
+        Handlers["Handlers"]
+        Services["Services"]
+        Repositories["Repositories"]
+        Middleware["Middleware"]
+        Logger["Logger"]
     end
 
-    API -->|"Contains"| H
-    API -->|"Contains"| S
-    API -->|"Contains"| R
-    API -->|"Contains"| M
-    API -->|"Contains"| L
+    API -->|"Contains"| Handlers
+    API -->|"Contains"| Services
+    API -->|"Contains"| Repositories
+    API -->|"Contains"| Middleware
+    API -->|"Contains"| Logger
 
-    H -->|"Uses"| S
-    S -->|"Uses"| R
-    H -->|"Uses"| M
-    S -->|"Uses"| L
-    R -->|"Interacts with"| DB
-    R -->|"Interacts with"| Cache
+    Handlers -->|"Uses"| Services
+    Services -->|"Uses"| Repositories
+    Handlers -->|"Uses"| Middleware
+    Services -->|"Uses"| Logger
+    Repositories -->|"Interacts with"| DB
+    Repositories -->|"Interacts with"| Cache
+
+    subgraph "Component (Worker)"
+        RateUpdater["Rate Updater"]
+        ExternalClient["External API Client"]
+        PartitionManager["Partition Manager"]
+    end
+
+    Worker -->|"Contains"| RateUpdater
+    Worker -->|"Contains"| ExternalClient
+    Worker -->|"Contains"| PartitionManager
+
+    RateUpdater -->|"Uses"| ExternalClient
+    RateUpdater -->|"Updates"| Repositories
+    PartitionManager -->|"Manages"| DB
