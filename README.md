@@ -33,30 +33,9 @@
                 -   [POST /auth/login](#post-authlogin)
         -   [Error Responses](#error-responses)
         -   [Rate Limiting](#rate-limiting)
-    -   [Technology Stack](#technology-stack-1)
-    -   [Services](#services-1)
-    -   [Features](#features-1)
-    -   [Setup and Configuration](#setup-and-configuration-1)
-        -   [Environment Variables](#environment-variables-1)
-        -   [Constants Configuration](#constants-configuration-1)
-        -   [Docker Setup](#docker-setup-1)
-        -   [Local Development](#local-development-1)
-        -   [Testing](#testing-1)
-    -   [API Documentation](#api-documentation-1)
-        -   [Base URL](#base-url-1)
-        -   [Authentication](#authentication-1)
-        -   [Endpoints](#endpoints-1)
-            -   [Currency Conversion](#currency-conversion-1)
-                -   [GET /currency/convert](#get-currencyconvert-1)
-            -   [Currency Management (Admin only)](#currency-management-admin-only-1)
-                -   [POST /currency](#post-currency-1)
-                -   [PUT /currency/{code}](#put-currencycode-1)
-                -   [DELETE /currency/{code}](#delete-currencycode-1)
-            -   [User Management](#user-management-1)
-                -   [POST /auth/register](#post-authregister-1)
-                -   [POST /auth/login](#post-authlogin-1)
-        -   [Error Responses](#error-responses-1)
-        -   [Rate Limiting](#rate-limiting-1)
+        -   [C4 Diagram](#c4-diagram)
+        -   [Dependencies Map](#dependencies-map)
+        -   [Entity Relationship Diagram](#entity-relationship-diagram)
     -   [Auto-Generated Code](#auto-generated-code)
     -   [Improvements](#improvements)
     -   [Final Thoughts](#final-thoughts)
@@ -389,6 +368,18 @@ Common error status codes:
 ### Rate Limiting
 
 The API implements rate limiting to prevent abuse in some endpoints. If you exceed the rate limit, you'll receive a 429 status code. Wait before making additional requests.
+
+### C4 Diagram
+
+![C4 Diagram](docs/c4/c4-model.png)
+
+### Dependencies Map
+
+![Dependencies Map](docs/dependency-map/dependency-map.png)
+
+### Entity Relationship Diagram
+
+![ER Diagram](docs/entity-map/entity-map.png)
 
 ## Auto-Generated Code
 
