@@ -144,6 +144,7 @@ The `internal/commons/constants.go` file contains important constants that can b
 -   `ExternalClientBaseDelay`: Base delay for exponential backoff in external API calls (default: 1 second).
 -   `ExternalClientMaxDelay`: Maximum delay for exponential backoff in external API calls (default: 30 seconds).
 -   `RateUpdaterCacheExipiration`: Expiration time for cached exchange rates (default: 1 hour).
+-   `RateUpdaterInterval`: Interval for updating exchange rates (default: 1 hour).
 -   `ServerIdleTimeout`: Server idle timeout (default: 1 minute).
 -   `ServerReadTimeout`: Server read timeout (default: 10 seconds).
 -   `ServerWriteTimeout`: Server write timeout (default: 30 seconds).

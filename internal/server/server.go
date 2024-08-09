@@ -46,7 +46,7 @@ func NewServer(config Config) (*Server, error) {
 	externalAPI := worker.NewOpenExchangeRatesClient(config.APIKey)
 	currencyService := service.NewCurrencyService(repo, redisCache)
 	userService := service.NewUserService(userRepo)
-	rateUpdater := worker.NewRateUpdater(repo, redisCache, externalAPI, 1*time.Hour)
+	rateUpdater := worker.NewRateUpdater(repo, redisCache, externalAPI, commons.RateUpdaterInterval)
 	logger.InitLogger(logRepo)
 	partManager := logger.NewPartitionManager(logRepo)
 	if err := partManager.Start(context.Background()); err != nil {
