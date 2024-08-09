@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/model"
 	"github.com/Lutefd/challenge-bravo/internal/server"
 	"github.com/google/uuid"
@@ -68,7 +69,7 @@ func setup() error {
 		return fmt.Errorf("error seeding database: %w", err)
 	}
 
-	config, err := server.LoadConfig()
+	config, err := commons.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -196,7 +197,7 @@ func teardown() error {
 }
 
 func setupTestServer(t *testing.T) {
-	config, err := server.LoadConfig()
+	config, err := commons.LoadConfig()
 	require.NoError(t, err, "Failed to load config")
 
 	config.PostgresConn = os.Getenv("TEST_POSTGRES_CONN")

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/server"
 	"github.com/joho/godotenv"
 )
@@ -15,7 +16,7 @@ func main() {
 		log.Printf("Error loading .env file: %v", err)
 	}
 
-	config, err := server.LoadConfig()
+	config, err := commons.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}

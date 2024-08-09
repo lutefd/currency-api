@@ -11,22 +11,19 @@ import (
 	"github.com/Lutefd/challenge-bravo/internal/logger"
 	"github.com/Lutefd/challenge-bravo/internal/repository"
 	"github.com/Lutefd/challenge-bravo/internal/service"
-	"github.com/Lutefd/challenge-bravo/internal/worker"
 )
 
 type Server struct {
-	config        Config
+	config        commons.Config
 	httpServer    *http.Server
 	Router        http.Handler
-	rateUpdater   *worker.RateUpdater
 	currencyRepo  repository.CurrencyRepository
 	currencyCache cache.Cache
-	externalAPI   worker.ExternalAPIClient
 	userRepo      repository.UserRepository
 	logRepo       repository.LogRepository
 }
 
-func NewServer(config Config) (*Server, error) {
+func NewServer(config commons.Config) (*Server, error) {
 	repo, err := repository.NewPostgresCurrencyRepository(config.PostgresConn, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize repository: %w", err)
@@ -43,10 +40,8 @@ func NewServer(config Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize cache: %w", err)
 	}
-	externalAPI := worker.NewOpenExchangeRatesClient(config.APIKey)
 	currencyService := service.NewCurrencyService(repo, redisCache)
 	userService := service.NewUserService(userRepo)
-	rateUpdater := worker.NewRateUpdater(repo, redisCache, externalAPI, commons.RateUpdaterInterval)
 	logger.InitLogger(logRepo)
 	partManager := logger.NewPartitionManager(logRepo)
 	if err := partManager.Start(context.Background()); err != nil {
@@ -56,8 +51,6 @@ func NewServer(config Config) (*Server, error) {
 		config:        config,
 		currencyRepo:  repo,
 		currencyCache: redisCache,
-		externalAPI:   externalAPI,
-		rateUpdater:   rateUpdater,
 		userRepo:      userRepo,
 		logRepo:       logRepo,
 	}
@@ -76,7 +69,6 @@ func NewServer(config Config) (*Server, error) {
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	go s.rateUpdater.Start(ctx)
 	go func() {
 		logger.Infof("Server started on port %d", s.config.ServerPort)
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {

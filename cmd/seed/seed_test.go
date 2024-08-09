@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/model"
-	"github.com/Lutefd/challenge-bravo/internal/server"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,8 +21,8 @@ func TestRun(t *testing.T) {
 	defer db.Close()
 
 	mockDeps := dependencies{
-		loadConfig: func() (server.Config, error) {
-			return server.Config{PostgresConn: "mock"}, nil
+		loadConfig: func() (commons.Config, error) {
+			return commons.Config{PostgresConn: "mock"}, nil
 		},
 		openDB: func(driverName, dataSourceName string) (*sql.DB, error) {
 			return db, nil

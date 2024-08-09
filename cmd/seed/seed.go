@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/Lutefd/challenge-bravo/internal/model"
-	"github.com/Lutefd/challenge-bravo/internal/server"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -16,7 +16,7 @@ import (
 )
 
 type dependencies struct {
-	loadConfig func() (server.Config, error)
+	loadConfig func() (commons.Config, error)
 	openDB     func(driverName, dataSourceName string) (*sql.DB, error)
 	newUUID    func() uuid.UUID
 	timeNow    func() time.Time
@@ -24,7 +24,7 @@ type dependencies struct {
 }
 
 var defaultDeps = dependencies{
-	loadConfig: server.LoadConfig,
+	loadConfig: commons.LoadConfig,
 	openDB:     sql.Open,
 	newUUID:    uuid.New,
 	timeNow:    time.Now,

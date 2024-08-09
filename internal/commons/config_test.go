@@ -1,11 +1,11 @@
-package server_test
+package commons_test
 
 import (
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/Lutefd/challenge-bravo/internal/server"
+	"github.com/Lutefd/challenge-bravo/internal/commons"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +34,7 @@ func TestLoadConfig(t *testing.T) {
 		setEnv("API_KEY", "my-api-key")
 		setEnv("SERVER_PORT", "8080")
 
-		config, err := server.LoadConfig()
+		config, err := commons.LoadConfig()
 
 		assert.NoError(t, err)
 		assert.Equal(t, "password", config.RedisPass)
@@ -47,7 +47,7 @@ func TestLoadConfig(t *testing.T) {
 	t.Run("Missing environment variables", func(t *testing.T) {
 		os.Clearenv()
 
-		_, err := server.LoadConfig()
+		_, err := commons.LoadConfig()
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "configuration errors occurred")
@@ -64,7 +64,7 @@ func TestLoadConfig(t *testing.T) {
 		setEnv("API_KEY", "my-api-key")
 		setEnv("SERVER_PORT", "invalid-port")
 
-		_, err := server.LoadConfig()
+		_, err := commons.LoadConfig()
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "configuration errors occurred")
@@ -75,7 +75,7 @@ func TestLoadConfig(t *testing.T) {
 		setEnv("REDIS_PASSWORD", "password")
 		setEnv("REDIS_ADDR", "localhost:6379")
 
-		_, err := server.LoadConfig()
+		_, err := commons.LoadConfig()
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "configuration errors occurred")
