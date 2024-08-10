@@ -158,6 +158,13 @@ To run the application using Docker, follow these steps:
 
 5. The API will be available at `http://localhost:8080` if you're using the default port
    and host provided in the `.env.sample`.
+6. For Endpoints like currency creation, update and delete you will need to use the admin user's API Key created by the migration, the credentials are:
+  ```json
+  {
+    "username": "admin",
+    "password": "password"
+  }
+```
 
 ### Local Development
 
@@ -174,7 +181,13 @@ For local development without Docker:
     ```
     make run
     ```
-
+6. For Endpoints like currency creation, update and delete you will need to use the admin user created by the migration, the credentials are:
+    ```json
+    {
+    "username": "admin",
+    "password": "password"
+    }
+    ```
 ### Testing
 
 Run the test suite with:
@@ -208,6 +221,13 @@ The API documentation is available at `http://localhost:8080/api/v1/reference`
 ### Authentication
 
 Most endpoints require authentication using an API key. Include the API key in the `X-API-Key` header of your requests.
+Get the API Key by logging in the `/api/v1/auth/login in with the admin user created by the migration, the credentials are:
+```json
+{
+    "username": "admin",
+    "password": "password"
+}
+```
 
 ### Endpoints
 
@@ -240,7 +260,7 @@ Example Response:
 }
 ```
 
-#### Currency Management (Admin only)
+#### Currency Management (Admin only): use the api key from the admin user for these endpoints
 
 ##### POST /currency
 
