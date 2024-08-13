@@ -10,8 +10,6 @@ import (
 	"github.com/Lutefd/challenge-bravo/internal/repository"
 )
 
-// Mock implementations (same as before, but with some additions)
-
 type mockCurrencyRepository struct {
 	repository.CurrencyRepository
 	closeCalled bool
