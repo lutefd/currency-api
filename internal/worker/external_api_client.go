@@ -61,7 +61,7 @@ func NewOpenExchangeRatesClient(apiKey string, options ...OpenExchangeRatesClien
 }
 
 func (c *OpenExchangeRatesClient) FetchRates(ctx context.Context) (*model.ExchangeRates, error) {
-	url := fmt.Sprintf("%s/latest.json?app_id=%s", c.baseURL, c.apiKey)
+	url := fmt.Sprintf("%s/latest.json?app_id=%s&show_alternative=true", c.baseURL, c.apiKey)
 
 	var rates *model.ExchangeRates
 	var err error
