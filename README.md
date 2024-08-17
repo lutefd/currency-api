@@ -1,10 +1,10 @@
-# Challenge Bravo
+# Currency API
 
 ![Current Code Coverage](https://img.shields.io/badge/coverage-69.3%25-yellow)
 
 ## Table of Contents
 
--   [Challenge Bravo](#challenge-bravo)
+-   [Currency API](#currency-API)
     -   [Table of Contents](#table-of-contents)
     -   [Project Description](#project-description)
     -   [Technology Stack](#technology-stack)
@@ -42,7 +42,7 @@
 
 ## Project Description
 
-This API was developed for the Bravo challenge. The goal was to create an API that could convert between various currencies, both real and fictional, with live and custom values.# Challenge Bravo
+This API was developed for the Bravo challenge. The goal was to create an API that could convert between various currencies, both real and fictional, with live and custom values.
 
 **Additionally, it should be noted that the API's base currency is USD**.
 
@@ -423,7 +423,3 @@ There are a lot of improvements that could be made to this project, I decided to
 ## Final Thoughts
 
 I learned a lot while doing this challenge, there were a lot of things that could be improved and I'm going to keep studying so I can improve my skills and be able to do better in my next projects. It was a bit difficult to find the time to do this project, but I'm happy to have done it and I'm happy with the result.
-
-<p align="center">
-  <img src="ca.jpg" alt="Challange accepted" />
-</p>
