@@ -144,8 +144,8 @@ To run the application using Docker, follow these steps:
 2. Clone the repository:
 
     ```bash
-    git clone git@github.com:Lutefd/challenge-bravo.git
-    cd challenge-bravo
+    git clone git@github.com:Lutefd/currency-api.git
+    cd currency-api
     ```
 
 3. Create a `.env` file in the project root and configure the necessary environment variables, a `.env.sample` file is provided (see API Configuration docs for details).
